@@ -257,11 +257,11 @@ string data_type(vector<char>& buffer, int& index, int& fence) {
     while (next_char(buffer, index, fence) == '[') {
         if (next_char(buffer, index, fence) != ']') {
             rollback(index, fence);
-            rollback(index, fence);
             break;
         }
         result += "[]";
     }
+    rollback(index, fence);
     return result;
 }
 
@@ -327,22 +327,24 @@ int main() {
             cout << "(ao, " << result << ")\n";
         } else if ((result = logical_operator(buffer, index, fence)) != "") {
             // strs
-            cout << "log_op, " << result << ")\n";
+            cout << "(log_op, " << result << ")\n";
         } else if ((result = logicalnot(buffer, index)) != "") {
             // strs
-            cout << "log_not, " << result << ")\n";
+            cout << "(log_not, " << result << ")\n";
         } else if ((result = string_token(buffer, index, fence)) != "") {
             // strs
-            cout << "str, " << result << ")\n";
+            cout << "(str, " << result << ")\n";
         } else if ((result = identifier(buffer, index, fence)) != "") {
             // strs
-            cout << "identifier, " << result << ")\n";
+            cout << "(identifier, " << result << ")\n";
         } else if ((result = data_type(buffer, index, fence)) != "") {
             // strs
-            cout << "data_type, " << result << ")\n";
+            cout << "(data_type, " << result << ")\n";
         } else if ((result = boolean(buffer, index, fence)) != "") {
             // strs
-            cout << "bool, " << result << ")\n";
+            cout << "(bool, " << result << ")\n";
+        } else {
+            cout << "(unrecognized, " << c << ")\n";
         }
         c = next_char(buffer, index, fence);
     }
