@@ -137,14 +137,20 @@ string arithmetic_operator(vector<char>& buffer, int& index) {
 }
 
 string logical_operator(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) == '|' && next_char(buffer, index, fence) == '|') {
-        return "||";
+    if (cur_char(buffer, index) == '|') {
+        if (next_char(buffer, index, fence) == '|') {
+            return "||";
+        } else {
+            rollback(index, fence);
+        }
     }
-    rollback(index, fence);
-    if (cur_char(buffer, index) == '&' && next_char(buffer, index, fence) == '&') {
-        return "&&";
+    if (cur_char(buffer, index) == '&') {
+        if (next_char(buffer, index, fence) == '&') {
+            return "&&";
+        } else {
+            rollback(index, fence);
+        }
     }
-    rollback(index, fence);
     return "";
 }
 
@@ -316,6 +322,27 @@ int main() {
         } else if ((result = integer(buffer, index, fence)) != "") {
             // strs
             cout << "(int, " << result << ")\n";
+        } else if ((result = arithmetic_operator(buffer, index)) != "") {
+            // strs
+            cout << "(ao, " << result << ")\n";
+        } else if ((result = logical_operator(buffer, index, fence)) != "") {
+            // strs
+            cout << "log_op, " << result << ")\n";
+        } else if ((result = logicalnot(buffer, index)) != "") {
+            // strs
+            cout << "log_not, " << result << ")\n";
+        } else if ((result = string_token(buffer, index, fence)) != "") {
+            // strs
+            cout << "str, " << result << ")\n";
+        } else if ((result = identifier(buffer, index, fence)) != "") {
+            // strs
+            cout << "identifier, " << result << ")\n";
+        } else if ((result = data_type(buffer, index, fence)) != "") {
+            // strs
+            cout << "data_type, " << result << ")\n";
+        } else if ((result = boolean(buffer, index, fence)) != "") {
+            // strs
+            cout << "bool, " << result << ")\n";
         }
         c = next_char(buffer, index, fence);
     }
