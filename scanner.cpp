@@ -568,7 +568,8 @@ int main(int argc, char* argv[]) {
             // strs
             cout << "(punc, " << result << ")\n";
         } else {
-            cout << "(unrecognized, " << c << ")\n";
+            // replace later with a random program
+            throw runtime_error("unknown token");
         }
         c = next_char(buffer, index, fence);
     }
