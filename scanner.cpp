@@ -87,7 +87,7 @@ string newline(vector<char>& buffer, int& index, int& fence) {
 }
 
 string integer(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) != '-' && (cur_char(buffer, index) < '1' || cur_char(buffer, index) > '9')) {
+    if (cur_char(buffer, index) != '-' && (cur_char(buffer, index) < '0' || cur_char(buffer, index) > '9')) {
         return "";
     }
     string result = "";
@@ -137,6 +137,45 @@ string arithmetic_operator(vector<char>& buffer, int& index) {
     case '%':
     case '^':
         return string(1, cur_char(buffer, index));
+    default:
+        return "";
+    }
+}
+
+string comparison_operator(vector<char>& buffer, int& index, int& fence) {
+    switch (cur_char(buffer, index)) {
+    case '=': {
+        if (next_char(buffer, index, fence) == '=') {
+            return "==";
+        } else {
+            rollback(index, fence);
+            return "";
+        }
+    }
+    case '>': {
+        if (next_char(buffer, index, fence) == '=') {
+            return ">=";
+        } else {
+            rollback(index, fence);
+            return ">";
+        }
+    }
+    case '<': {
+        if (next_char(buffer, index, fence) == '=') {
+            return "<=";
+        } else {
+            rollback(index, fence);
+            return "<";
+        }
+    }
+    case '!': {
+        if (next_char(buffer, index, fence) == '=') {
+            return "!=";
+        } else {
+            rollback(index, fence);
+            return "";
+        }
+    }
     default:
         return "";
     }
@@ -439,10 +478,19 @@ string boolean(vector<char>& buffer, int& index, int& fence) {
 
 string punctuation(vector<char>& buffer, int& index) {
     string result = "";
-    if (cur_char(buffer, index) == '=') {
-        return "=";
+    switch (cur_char(buffer, index)) {
+    case '=':
+    case ':':
+    case '(':
+    case ')':
+    case '{':
+    case '}':
+    case ';':
+    case ',':
+        return string(1, cur_char(buffer, index));
+    default:
+        return "";
     }
-    return "";
 }
 
 int main(int argc, char* argv[]) {
@@ -489,6 +537,9 @@ int main(int argc, char* argv[]) {
         } else if ((result = logical_operator(buffer, index, fence)) != "") {
             // strs
             cout << "(log_op, " << result << ")\n";
+        } else if ((result = comparison_operator(buffer, index, fence)) != "") {
+            // strs
+            cout << "(comp_op, " << result << ")\n";
         } else if ((result = logicalnot(buffer, index)) != "") {
             // strs
             cout << "(log_not, " << result << ")\n";
