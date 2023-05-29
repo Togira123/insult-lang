@@ -270,6 +270,145 @@ string data_type(vector<char>& buffer, int& index, int& fence) {
     return result;
 }
 
+string control_flow_keyword(vector<char>& buffer, int& index, int& fence) {
+    if (cur_char(buffer, index) == 'i') {
+        if (next_char(buffer, index, fence) != 'f') {
+            rollback(index, fence);
+            return "";
+        }
+        return "if";
+    }
+    if (cur_char(buffer, index) == 'e') {
+        const vector<char> cs = {'l', 's', 'e'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "else";
+    }
+    if (cur_char(buffer, index) == 'b') {
+        const vector<char> cs = {'r', 'e', 'a', 'k'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "break";
+    }
+    if (cur_char(buffer, index) == 'c') {
+        const vector<char> cs = {'o', 'n', 't', 'i', 'n', 'u', 'e'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "continue";
+    }
+    if (cur_char(buffer, index) == 'r') {
+        const vector<char> cs = {'e', 't', 'u', 'r', 'n'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "return";
+    }
+    return "";
+}
+
+string iteration_keyword(vector<char>& buffer, int& index, int& fence) {
+    if (cur_char(buffer, index) == 'f') {
+        const vector<char> cs = {'o', 'r'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "for";
+    }
+    if (cur_char(buffer, index) == 'w') {
+        const vector<char> cs = {'h', 'i', 'l', 'e'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "while";
+    }
+    return "";
+}
+
+string general_keyword(vector<char>& buffer, int& index, int& fence) {
+    if (cur_char(buffer, index) == 'p') {
+        const vector<char> cs = {'l', 'e', 'a', 's', 'e'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "please";
+    }
+    if (cur_char(buffer, index) == 'd') {
+        const vector<char> cs = {'e', 'f'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "def";
+    }
+    if (cur_char(buffer, index) == 't') {
+        const vector<char> cs = {'h', 'a', 'n', 'k', 's'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "thanks";
+    }
+    if (cur_char(buffer, index) == 'f') {
+        const vector<char> cs = {'u', 'n'};
+        for (int i = 0; i < (int)cs.size(); i++) {
+            if (next_char(buffer, index, fence) != cs[i]) {
+                for (int j = 0; j < i + 1; j++) {
+                    rollback(index, fence);
+                }
+                return "";
+            }
+        }
+        return "fun";
+    }
+    return "";
+}
+
 string boolean(vector<char>& buffer, int& index, int& fence) {
     if (cur_char(buffer, index) == 't') {
         const vector<char> cs = {'r', 'u', 'e'};
@@ -362,6 +501,15 @@ int main(int argc, char* argv[]) {
         } else if ((result = data_type(buffer, index, fence)) != "") {
             // strs
             cout << "(data_type, " << result << ")\n";
+        } else if ((result = control_flow_keyword(buffer, index, fence)) != "") {
+            // strs
+            cout << "(control, " << result << ")\n";
+        } else if ((result = iteration_keyword(buffer, index, fence)) != "") {
+            // strs
+            cout << "(iteration, " << result << ")\n";
+        } else if ((result = general_keyword(buffer, index, fence)) != "") {
+            // strs
+            cout << "(gen_keyword, " << result << ")\n";
         } else if ((result = boolean(buffer, index, fence)) != "") {
             // strs
             cout << "(bool, " << result << ")\n";
