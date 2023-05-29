@@ -6,9 +6,11 @@
 
 using namespace std;
 
-const int N = 1024;
+const int N = 32;
 
 ifstream file;
+
+bool last_fill_at_zero = true;
 
 const vector<string> reserved_words = {
     "true", "false", "int", "double", "string", "bool", "please", "def", "while", "for", "if", "else", "break", "continue", "return", "thanks", "fun",
@@ -16,20 +18,21 @@ const vector<string> reserved_words = {
 
 char next_char(vector<char>& buffer, int& index, int& fence) {
     char c = buffer[index];
+    index = (index + 1) % (2 * N);
     // check for file end
     if (c == EOF) {
         return c;
     }
-    index = (index + 1) % (2 * N);
-    if (index % N == 0) {
+    if ((index == 0 && !last_fill_at_zero) || (index == N && last_fill_at_zero)) {
         // fill buffer
         for (int i = 0; i < N; i++) {
             if (file.eof()) {
-                buffer[index + i] = EOF;
+                buffer[index + i - 1] = EOF;
                 break;
             }
             file >> buffer[index + i];
         }
+        last_fill_at_zero = index == 0;
         fence = (index + N) % (2 * N);
     }
     return c;
@@ -190,8 +193,7 @@ string identifier(vector<char>& buffer, int& index, int& fence) {
     string result = "";
     result += cur_char(buffer, index);
     char c = next_char(buffer, index, fence);
-    while (c == '_' || (cur_char(buffer, index) >= 'A' && cur_char(buffer, index) <= 'Z') ||
-           (cur_char(buffer, index) >= 'a' && cur_char(buffer, index) <= 'z') || (c >= '0' && c <= '9')) {
+    while (c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
         result += c;
         c = next_char(buffer, index, fence);
     }
