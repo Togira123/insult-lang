@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <stack>
 #include <string>
@@ -5,7 +6,9 @@
 
 using namespace std;
 
-const int N = 16;
+const int N = 1024;
+
+ifstream file;
 
 const vector<string> reserved_words = {
     "true", "false", "int", "double", "string", "bool", "please", "def", "while", "for", "if", "else", "break", "continue", "return", "thanks", "fun",
@@ -21,11 +24,11 @@ char next_char(vector<char>& buffer, int& index, int& fence) {
     if (index % N == 0) {
         // fill buffer
         for (int i = 0; i < N; i++) {
-            if (cin.eof()) {
+            if (file.eof()) {
                 buffer[index + i] = EOF;
                 break;
             }
-            cin >> buffer[index + i];
+            file >> buffer[index + i];
         }
         fence = (index + N) % (2 * N);
     }
@@ -293,17 +296,34 @@ string boolean(vector<char>& buffer, int& index, int& fence) {
     return "";
 }
 
-int main() {
+string punctuation(vector<char>& buffer, int& index) {
+    string result = "";
+    if (cur_char(buffer, index) == '=') {
+        return "=";
+    }
+    return "";
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        cerr << "Specify program to compile!\n";
+        return 1;
+    }
+    file = ifstream(argv[1]);
+    if (!file.good()) {
+        cerr << "There was an error trying to compile the file!\n";
+        return 1;
+    }
     int index = 0;
     int fence = 0;
-    cin >> noskipws;
+    file >> noskipws;
     vector<char> buffer(N * 2);
     for (int i = 0; i < N; i++) {
-        if (cin.eof()) {
+        if (file.eof()) {
             buffer[i] = EOF;
             break;
         }
-        cin >> buffer[i];
+        file >> buffer[i];
     }
     char c = next_char(buffer, index, fence);
 
@@ -343,9 +363,13 @@ int main() {
         } else if ((result = boolean(buffer, index, fence)) != "") {
             // strs
             cout << "(bool, " << result << ")\n";
+        } else if ((result = punctuation(buffer, index)) != "") {
+            // strs
+            cout << "(punc, " << result << ")\n";
         } else {
             cout << "(unrecognized, " << c << ")\n";
         }
         c = next_char(buffer, index, fence);
     }
+    file.close();
 }
