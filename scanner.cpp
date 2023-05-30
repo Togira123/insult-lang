@@ -10,6 +10,7 @@ const int N = 32;
 
 ifstream file;
 
+// makes sure the buffer is only filled when necessary
 bool last_fill_at_zero = true;
 
 const vector<string> reserved_words = {
@@ -71,14 +72,16 @@ string whitespace(vector<char>& buffer, int& index, int& fence) {
     return result;
 }
 
-string newline(vector<char>& buffer, int& index, int& fence) {
+string newline(vector<char>& buffer, int& index, int& fence, int& line) {
     if (cur_char(buffer, index) != '\n') {
         return "";
     }
     string result = "";
     result += cur_char(buffer, index);
+    line++;
     char c = next_char(buffer, index, fence);
     while (c == '\n') {
+        line++;
         result += c;
         c = next_char(buffer, index, fence);
     }
@@ -237,14 +240,25 @@ string identifier(vector<char>& buffer, int& index, int& fence) {
         c = next_char(buffer, index, fence);
     }
     rollback(index, fence);
-    // check if the resulting identifier matches any keyword
-    for (const string& e : reserved_words) {
-        if (result == e) {
-            for (int i = 0; i < result.length() - 1; i++) {
-                rollback(index, fence);
-            }
-            return "";
+    if (result == "int") {
+        rollback(index, fence);
+        rollback(index, fence);
+        return "";
+    } else if (result == "double") {
+        for (int i = 0; i < 5; i++) {
+            rollback(index, fence);
         }
+        return "";
+    } else if (result == "string") {
+        for (int i = 0; i < 5; i++) {
+            rollback(index, fence);
+        }
+        return "";
+    } else if (result == "bool") {
+        for (int i = 0; i < 3; i++) {
+            rollback(index, fence);
+        }
+        return "";
     }
     return result;
 }
@@ -309,173 +323,6 @@ string data_type(vector<char>& buffer, int& index, int& fence) {
     return result;
 }
 
-string control_flow_keyword(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) == 'i') {
-        if (next_char(buffer, index, fence) != 'f') {
-            rollback(index, fence);
-            return "";
-        }
-        return "if";
-    }
-    if (cur_char(buffer, index) == 'e') {
-        const vector<char> cs = {'l', 's', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "else";
-    }
-    if (cur_char(buffer, index) == 'b') {
-        const vector<char> cs = {'r', 'e', 'a', 'k'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "break";
-    }
-    if (cur_char(buffer, index) == 'c') {
-        const vector<char> cs = {'o', 'n', 't', 'i', 'n', 'u', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "continue";
-    }
-    if (cur_char(buffer, index) == 'r') {
-        const vector<char> cs = {'e', 't', 'u', 'r', 'n'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "return";
-    }
-    return "";
-}
-
-string iteration_keyword(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) == 'f') {
-        const vector<char> cs = {'o', 'r'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "for";
-    }
-    if (cur_char(buffer, index) == 'w') {
-        const vector<char> cs = {'h', 'i', 'l', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "while";
-    }
-    return "";
-}
-
-string general_keyword(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) == 'p') {
-        const vector<char> cs = {'l', 'e', 'a', 's', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "please";
-    }
-    if (cur_char(buffer, index) == 'd') {
-        const vector<char> cs = {'e', 'f'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "def";
-    }
-    if (cur_char(buffer, index) == 't') {
-        const vector<char> cs = {'h', 'a', 'n', 'k', 's'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "thanks";
-    }
-    if (cur_char(buffer, index) == 'f') {
-        const vector<char> cs = {'u', 'n'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "fun";
-    }
-    return "";
-}
-
-string boolean(vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) == 't') {
-        const vector<char> cs = {'r', 'u', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "true";
-    }
-    if (cur_char(buffer, index) == 'f') {
-        const vector<char> cs = {'a', 'l', 's', 'e'};
-        for (int i = 0; i < (int)cs.size(); i++) {
-            if (next_char(buffer, index, fence) != cs[i]) {
-                for (int j = 0; j < i + 1; j++) {
-                    rollback(index, fence);
-                }
-                return "";
-            }
-        }
-        return "false";
-    }
-    return "";
-}
-
 string punctuation(vector<char>& buffer, int& index) {
     string result = "";
     switch (cur_char(buffer, index)) {
@@ -487,6 +334,8 @@ string punctuation(vector<char>& buffer, int& index) {
     case '}':
     case ';':
     case ',':
+    case '[':
+    case ']':
         return string(1, cur_char(buffer, index));
     default:
         return "";
@@ -516,13 +365,15 @@ int main(int argc, char* argv[]) {
     }
     char c = next_char(buffer, index, fence);
 
+    int line = 1;
+    bool new_line = false;
     while (c != EOF) {
         // do something
         string result;
         if ((result = whitespace(buffer, index, fence)) != "") {
             // store the result somehow
             cout << "(ws, " << result << ")\n";
-        } else if ((result = newline(buffer, index, fence)) != "") {
+        } else if ((result = newline(buffer, index, fence, line)) != "") {
             // strs
             cout << "(nl, " << result << ")\n";
         } else if ((result = double_token(buffer, index, fence)) != "") {
@@ -548,28 +399,26 @@ int main(int argc, char* argv[]) {
             cout << "(str, " << result << ")\n";
         } else if ((result = identifier(buffer, index, fence)) != "") {
             // strs
-            cout << "(identifier, " << result << ")\n";
+            if (result == "true" || result == "false") {
+                cout << "(bool, " << result << ")\n";
+            } else if (result == "if" || result == "else" || result == "break" || result == "continue" || result == "continue") {
+                cout << "(control, " << result << ")\n";
+            } else if (result == "for" || result == "while") {
+                cout << "(iteration, " << result << ")\n";
+            } else if (result == "please" || result == "thanks" || result == "def" || result == "fun") {
+                cout << "(gen_keyword, " << result << ")\n";
+            } else {
+                cout << "(identifier, " << result << ")\n";
+            }
         } else if ((result = data_type(buffer, index, fence)) != "") {
             // strs
             cout << "(data_type, " << result << ")\n";
-        } else if ((result = control_flow_keyword(buffer, index, fence)) != "") {
-            // strs
-            cout << "(control, " << result << ")\n";
-        } else if ((result = iteration_keyword(buffer, index, fence)) != "") {
-            // strs
-            cout << "(iteration, " << result << ")\n";
-        } else if ((result = general_keyword(buffer, index, fence)) != "") {
-            // strs
-            cout << "(gen_keyword, " << result << ")\n";
-        } else if ((result = boolean(buffer, index, fence)) != "") {
-            // strs
-            cout << "(bool, " << result << ")\n";
         } else if ((result = punctuation(buffer, index)) != "") {
             // strs
             cout << "(punc, " << result << ")\n";
         } else {
             // replace later with a random program
-            throw runtime_error("unknown token");
+            throw runtime_error("unknown token at line " + to_string(line) + ": " + string(1, c) + "\n");
         }
         c = next_char(buffer, index, fence);
     }
