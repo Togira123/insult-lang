@@ -223,7 +223,6 @@ string string_token(vector<char>& buffer, int& index, int& fence) {
     if (c == EOF) {
         return "";
     }
-    rollback(index, fence);
     return result;
 }
 
@@ -366,7 +365,6 @@ int main(int argc, char* argv[]) {
     char c = next_char(buffer, index, fence);
 
     int line = 1;
-    bool new_line = false;
     while (c != EOF) {
         // do something
         string result;
