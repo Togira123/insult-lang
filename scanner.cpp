@@ -6,16 +6,12 @@
 
 using namespace std;
 
-const int N = 32;
+const int N = 128;
 
 ifstream file;
 
 // makes sure the buffer is only filled when necessary
 bool last_fill_at_zero = true;
-
-const vector<string> reserved_words = {
-    "true", "false", "int", "double", "string", "bool", "please", "def", "while", "for", "if", "else", "break", "continue", "return", "thanks", "fun",
-};
 
 char next_char(vector<char>& buffer, int& index, int& fence) {
     char c = buffer[index];
