@@ -337,6 +337,41 @@ string punctuation(vector<char>& buffer, int& index) {
     }
 }
 
+string comment(vector<char>& buffer, int& index, int& fence) {
+    if (cur_char(buffer, index) != '/') {
+        return "";
+    }
+    if (next_char(buffer, index, fence) == '/') {
+        string result = "//";
+        char c = next_char(buffer, index, fence);
+        while (c != '\n' && c != EOF) {
+            result += c;
+            c = next_char(buffer, index, fence);
+        }
+        rollback(index, fence);
+        return result;
+    } else if (cur_char(buffer, index) == '*') {
+        string result = "/*";
+        char c = next_char(buffer, index, fence);
+        while (c != EOF) {
+            result += c;
+            if (c == '*') {
+                if ((c = next_char(buffer, index, fence)) == '/') {
+                    return result + '/';
+                }
+            } else {
+                c = next_char(buffer, index, fence);
+            }
+        }
+        rollback(index, fence);
+        // it's only a comment if it really ends with "*/"
+        return "";
+    } else {
+        rollback(index, fence);
+        return "";
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         cerr << "Specify program to compile!\n";
@@ -370,6 +405,9 @@ int main(int argc, char* argv[]) {
         } else if ((result = newline(buffer, index, fence, line)) != "") {
             // strs
             cout << "(nl, " << result << ")\n";
+        } else if ((result = comment(buffer, index, fence)) != "") {
+            // strs
+            cout << "(comment, " << result << ")\n";
         } else if ((result = double_token(buffer, index, fence)) != "") {
             // strs
             cout << "(double, " << result << ")\n";
