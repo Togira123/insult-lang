@@ -1,0 +1,91 @@
+whitespace ::= " " | "\t", {" " | "\t"}
+
+newline ::= "\n", {"\n"}
+
+arithmetic_operator ::= "+" | "/" | "%" | "*" | "^" | "-"
+
+comparison_operator ::= "==" | ">" | ">=" | "<" | "<=" | "!="
+
+logical_operator ::= "||" | "&&"
+
+logical_not ::= "!"
+
+lowercase_letter ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+
+uppercase_letter ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+
+letter ::= lowercase_letter | uppercase_letter
+
+digit_except_zero ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+digit ::= "0" | digit_except_zero
+
+integer ::= ["-"], ("0" | (digit_except_zero, {digit}))
+
+double ::= integer, ".", digit, {digit}
+
+number ::= integer | double
+
+string ::= "\"", {any symbol}, "\""
+
+boolean ::= "true" | "false"
+
+raw_data_type ::= "int" | "double" | "string" | "bool"
+
+data_type ::= raw_data_type, {"[]"}
+
+identifier ::= letter | "_", {letter | digit | "_"}
+
+assignment ::= identifier, [whitespace], "=", [whitespace], expression, [whitespace, "please"]
+
+definition ::= "def", whitespace, identifier, [whitespace], ":", [whitespace], data_type, [whitespace, "please"]
+
+definition_and_assignment ::= "def", whitespace, identifier, [whitespace], "=", [whitespace], expression, [whitespace, "please"]
+
+logical_expression ::= expression, [whitespace], logical_operator, [whitespace], expression | "(", [whitespace], expression, [whitespace], ")" | logical_not, [whitespace], expression
+
+comparison_expression ::= expression, [whitespace], comparison_operator, [whitespace], expression
+
+arithmetic_expression ::= expression, [whitespace], arithmetic_operator, [whitespace], expression
+
+list_expression ::= "[", newline_and_or_whitespace, "]" | "[", newline_and_or_whitespace, expression, newline_and_or_whitespace, {",", newline_and_or_whitespace, expression, newline_and_or_whitespace}, "]"
+
+expression ::= identifier | number | string | boolean | arithmetic_expression | logical_expression | list_expression
+
+evaluable ::= logical_expression | arithmetic_expression | assignment | definition | definition_and_assignment
+
+newline_and_or_whitespace ::= [newline], [whitespace], [newline]
+
+body ::= "{", newline_and_or_whitespace, program, newline_and_or_whitespace "}"
+
+while_statement ::= ["please", whitespace], "while", [whitespace], "(", [whitespace], expression, [whitespace], ")", newline_and_or_whitespace, body
+
+for_statement ::= ["please", whitespace], "for", [whitespace], "(", [whitespace], [evaluable], [whitespace], ";", [whitespace], [expression], [whitespace], ";", [whitespace], [expression], [whitespace], ")", newline_and_or_whitespace, body
+
+iteration_statement ::= while_statement | for_statement
+
+if_structure ::= "if", [whitespace], "(", [whitespace], expression, [whitespace], ")", newline_and_or_whitespace, body, [newline_and_or_whitespace, "else", newline_and_or_whitespace, body | if_structure]
+
+if_statement ::= ["please", whitespace], if_structure
+
+break_statement ::= "break", [whitespace, "please"]
+
+continue_statement ::= "continue", [whitespace, "please"]
+
+return_statement ::= "return", [whitespace, expression], [whitespace, "please"]
+
+jump_statement ::= break_statement | return_statement | continue_statement
+
+statement ::= iteration_statement | if_statement | jump_statement | function
+
+function ::= ["please", whitespace], ["thanks", whitespace], "fun", whitespace, identifier, [whitespace], "(", [whitespace], ")" | identifier, {[whitespace], ",", [whitespace], identifier}, [whitespace], ")", newline_and_or_whitespace, body
+
+comment ::= single_line_comment | multi_line_comment
+
+single_line_comment ::= "//", {any symbol}, (newline | eof)
+
+multi_line_comment ::= "/*", {any symbol}, "*/
+
+program ::= newline_and_or_whitespace | newline_and_or_whitespace, (expression | statement), {newline, [whitespace], [expression | statement], newline_and_or_whitespace}
+
+start ::= program

@@ -1,3 +1,4 @@
+#include "scanner.h"
 #include <fstream>
 #include <iostream>
 #include <stack>
@@ -9,6 +10,7 @@ using namespace std;
 const int N = 128;
 
 ifstream file;
+vector<token> token_list;
 
 // makes sure the buffer is only filled when necessary
 bool last_fill_at_zero = true;
@@ -337,15 +339,14 @@ string punctuation(vector<char>& buffer, int& index) {
     }
 }
 
-int main(int argc, char* argv[]) {
+vector<token>& scan_program(int argc, char* argv[]) {
     if (argc < 2) {
-        cerr << "Specify program to compile!\n";
-        return 1;
+        throw runtime_error("Specify program to compile!");
     }
     file = ifstream(argv[1]);
     if (!file.good()) {
-        cerr << "There was an error trying to compile the file!\n";
-        return 1;
+        file.close();
+        throw runtime_error("There was an error trying to compile the file!");
     }
     int index = 0;
     int fence = 0;
@@ -367,49 +368,65 @@ int main(int argc, char* argv[]) {
         if ((result = whitespace(buffer, index, fence)) != "") {
             // store the result somehow
             cout << "(ws, " << result << ")\n";
+            token_list.push_back({"ws", result});
         } else if ((result = newline(buffer, index, fence, line)) != "") {
             // strs
             cout << "(nl, " << result << ")\n";
+            token_list.push_back({"nl", result});
         } else if ((result = double_token(buffer, index, fence)) != "") {
             // strs
             cout << "(double, " << result << ")\n";
+            token_list.push_back({"double", result});
         } else if ((result = integer(buffer, index, fence)) != "") {
             // strs
             cout << "(int, " << result << ")\n";
+            token_list.push_back({"int", result});
         } else if ((result = arithmetic_operator(buffer, index)) != "") {
             // strs
             cout << "(ao, " << result << ")\n";
+            token_list.push_back({"ao", result});
         } else if ((result = logical_operator(buffer, index, fence)) != "") {
             // strs
             cout << "(log_op, " << result << ")\n";
+            token_list.push_back({"log_op", result});
         } else if ((result = comparison_operator(buffer, index, fence)) != "") {
             // strs
             cout << "(comp_op, " << result << ")\n";
+            token_list.push_back({"comp_op", result});
         } else if ((result = logicalnot(buffer, index)) != "") {
             // strs
             cout << "(log_not, " << result << ")\n";
+            token_list.push_back({"log_not", result});
         } else if ((result = string_token(buffer, index, fence)) != "") {
             // strs
             cout << "(str, " << result << ")\n";
+            token_list.push_back({"str", result});
         } else if ((result = identifier(buffer, index, fence)) != "") {
             // strs
             if (result == "true" || result == "false") {
                 cout << "(bool, " << result << ")\n";
+                token_list.push_back({"bool", result});
             } else if (result == "if" || result == "else" || result == "break" || result == "continue" || result == "continue") {
                 cout << "(control, " << result << ")\n";
+                token_list.push_back({"control", result});
             } else if (result == "for" || result == "while") {
                 cout << "(iteration, " << result << ")\n";
+                token_list.push_back({"iteration", result});
             } else if (result == "please" || result == "thanks" || result == "def" || result == "fun") {
                 cout << "(gen_keyword, " << result << ")\n";
+                token_list.push_back({"gen_keyword", result});
             } else {
                 cout << "(identifier, " << result << ")\n";
+                token_list.push_back({"identifier", result});
             }
         } else if ((result = data_type(buffer, index, fence)) != "") {
             // strs
             cout << "(data_type, " << result << ")\n";
+            token_list.push_back({"data_type", result});
         } else if ((result = punctuation(buffer, index)) != "") {
             // strs
             cout << "(punc, " << result << ")\n";
+            token_list.push_back({"punc", result});
         } else {
             // replace later with a random program
             throw runtime_error("unknown token at line " + to_string(line) + ": " + string(1, c) + "\n");
@@ -417,4 +434,5 @@ int main(int argc, char* argv[]) {
         c = next_char(buffer, index, fence);
     }
     file.close();
+    return token_list;
 }
