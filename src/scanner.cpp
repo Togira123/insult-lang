@@ -99,6 +99,9 @@ string integer(vector<char>& buffer, int& index, int& fence) {
         c = next_char(buffer, index, fence);
     }
     rollback(index, fence);
+    if (result == "-") {
+        return "";
+    }
     return result;
 }
 
