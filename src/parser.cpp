@@ -8,29 +8,29 @@ using namespace std;
 
 struct t {
     const token& next() {
-        if (token_list[index + 1].name != END_OF_INPUT) {
-            return token_list[++index];
+        if (token_list->at(index + 1).name != END_OF_INPUT) {
+            return token_list->at(++index);
         }
-        return token_list[index + 1];
+        return token_list->at(index + 1);
     }
     const token& previous() {
-        if (token_list[index - 1].name != END_OF_INPUT) {
-            return token_list[--index];
+        if (token_list->at(index - 1).name != END_OF_INPUT) {
+            return token_list->at(--index);
         }
-        return token_list[index - 1];
+        return token_list->at(index - 1);
     }
-    const token& current() { return token_list[index]; }
+    const token& current() { return token_list->at(index); }
     int current_index() { return index; }
-    t(vector<token>* token_list = nullptr) : token_list(*token_list) {}
-    void init(vector<token>& list) { token_list = list; }
+    t(vector<token>* token_list = nullptr) : token_list(token_list) {}
+    void init(vector<token>& list) { token_list = &list; }
 
 private:
-    vector<token>& token_list;
+    vector<token>* token_list;
     // has to be one because at index 0 we got the END_OF_INPUT token
     int index = 1;
 };
-vector<token> dummy;
-t tokens(&dummy);
+
+t tokens;
 
 inline bool newline() { return tokens.current().name == NEWLINE; }
 
@@ -60,8 +60,7 @@ inline bool newline_and_or_whitespace() {
             return true;
         }
     } else {
-        tokens.previous();
-        return true;
+        return false;
     }
 }
 
@@ -115,33 +114,33 @@ inline bool list_expression() {
         tokens.next();
         if (newline_and_or_whitespace()) {
             tokens.next();
-            if (tokens.current().name == PUNCTUATION && tokens.current().value == "]") {
-                return true;
-            }
-            if (expression()) {
+        }
+        if (tokens.current().name == PUNCTUATION && tokens.current().value == "]") {
+            return true;
+        }
+        if (expression()) {
+            tokens.next();
+            if (newline_and_or_whitespace()) {
                 tokens.next();
-                if (newline_and_or_whitespace()) {
+            }
+            while (true) {
+                if (tokens.current().name == PUNCTUATION && tokens.current().value == "]") {
+                    return true;
+                }
+                if (tokens.current().name == PUNCTUATION && tokens.current().value == ",") {
                     tokens.next();
-                    while (true) {
-                        if (tokens.current().name == PUNCTUATION && tokens.current().value == "]") {
-                            return true;
-                        }
-                        if (tokens.current().name == PUNCTUATION && tokens.current().value == ",") {
+                    if (newline_and_or_whitespace()) {
+                        tokens.next();
+                    }
+                    if (expression()) {
+                        tokens.next();
+                        if (newline_and_or_whitespace()) {
                             tokens.next();
-                            if (newline_and_or_whitespace()) {
-                                tokens.next();
-                                if (expression()) {
-                                    tokens.next();
-                                    if (newline_and_or_whitespace()) {
-                                        tokens.next();
-                                        continue;
-                                    }
-                                }
-                            }
                         }
-                        break;
+                        continue;
                     }
                 }
+                break;
             }
         }
     }
@@ -275,10 +274,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     if (newline_and_or_whitespace()) {
-        if (tokens.next().name == END_OF_INPUT) {
-            cout << "success!\n";
-            return 0;
-        }
+        tokens.next();
+    }
+    if (tokens.current().name == END_OF_INPUT) {
+        cout << "success!\n";
+        return 0;
     }
     if (expression() /*  || statement() */) {
         cout << "success!\n";
