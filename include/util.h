@@ -1,3 +1,4 @@
+#include "language.h"
 #include <string>
 
 using namespace std;
@@ -20,6 +21,6 @@ inline string& rtrim(string& s) {
 inline string& trim(string& s) { return ltrim(rtrim(s)); }
 
 struct token {
-    string name;
+    token_type name;
     string value;
 };

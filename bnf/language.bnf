@@ -42,7 +42,7 @@ definition ::= "def", whitespace, identifier, [whitespace], ":", [whitespace], d
 
 definition_and_assignment ::= "def", whitespace, identifier, [whitespace], "=", [whitespace], expression, [whitespace, "please"]
 
-logical_expression ::= expression, [whitespace], logical_operator, [whitespace], expression | "(", [whitespace], expression, [whitespace], ")" | logical_not, [whitespace], expression
+logical_expression ::= expression, [whitespace], logical_operator, [whitespace], expression | logical_not, [whitespace], expression
 
 comparison_expression ::= expression, [whitespace], comparison_operator, [whitespace], expression
 
@@ -50,7 +50,7 @@ arithmetic_expression ::= expression, [whitespace], arithmetic_operator, [whites
 
 list_expression ::= "[", newline_and_or_whitespace, "]" | "[", newline_and_or_whitespace, expression, newline_and_or_whitespace, {",", newline_and_or_whitespace, expression, newline_and_or_whitespace}, "]"
 
-expression ::= identifier | number | string | boolean | arithmetic_expression | logical_expression | list_expression
+expression ::= identifier | number | string | boolean | list_expression | "(", [whitespace], expression, [whitespace], ")" | arithmetic_expression | logical_expression | comparison_expression
 
 evaluable ::= logical_expression | arithmetic_expression | assignment | definition | definition_and_assignment
 

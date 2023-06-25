@@ -15,5 +15,6 @@ enum token_type {
     IDENTIFIER,
     DATA_TYPE,
     PUNCTUATION,
-    COMMENT
+    COMMENT,
+    END_OF_INPUT
 };
