@@ -76,7 +76,11 @@ return_statement ::= "return", [whitespace, expression], [whitespace, "please"]
 
 jump_statement ::= break_statement | return_statement | continue_statement
 
-statement ::= iteration_statement | if_statement | jump_statement | function
+expression_statement ::= expression, [whitespace, "please"]
+
+initialization_statement ::= definition | definition_and_assignment | assignment
+
+statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
 function ::= ["please", whitespace], ["thanks", whitespace], "fun", whitespace, identifier, [whitespace], "(", [whitespace], ")" | identifier, {[whitespace], ",", [whitespace], identifier}, [whitespace], ")", newline_and_or_whitespace, body
 
@@ -86,6 +90,6 @@ single_line_comment ::= "//", {any symbol}, (newline | eof)
 
 multi_line_comment ::= "/*", {any symbol}, "*/
 
-program ::= newline_and_or_whitespace | newline_and_or_whitespace, (expression | statement), {newline, [whitespace], [expression | statement], newline_and_or_whitespace}
+program ::= newline_and_or_whitespace | newline_and_or_whitespace, statement, {[whitespace], newline, [whitespace], [statement], newline_and_or_whitespace}
 
 start ::= program
