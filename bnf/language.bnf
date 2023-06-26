@@ -38,7 +38,7 @@ assignment ::= identifier, "=", expression, ["please"]
 
 definition ::= "def", identifier, ":", data_type, ["please"]
 
-definition_and_assignment ::= "def", identifier, "=", expression, ["please"]
+definition_and_assignment ::= "def", identifier, [":", data_type], "=", expression, ["please"]
 
 logical_expression ::= expression, logical_operator, expression | logical_not, expression
 
