@@ -1,5 +1,3 @@
-whitespace ::= " " | "\t", {" " | "\t"}
-
 newline ::= "\n", {"\n"}
 
 arithmetic_operator ::= "+" | "/" | "%" | "*" | "^" | "-"
@@ -36,53 +34,53 @@ data_type ::= raw_data_type, {"[]"}
 
 identifier ::= letter | "_", {letter | digit | "_"}
 
-assignment ::= identifier, [whitespace], "=", [whitespace], expression, [whitespace, "please"]
+assignment ::= identifier, "=", expression, ["please"]
 
-definition ::= "def", whitespace, identifier, [whitespace], ":", [whitespace], data_type, [whitespace, "please"]
+definition ::= "def", identifier, ":", data_type, ["please"]
 
-definition_and_assignment ::= "def", whitespace, identifier, [whitespace], "=", [whitespace], expression, [whitespace, "please"]
+definition_and_assignment ::= "def", identifier, "=", expression, ["please"]
 
-logical_expression ::= expression, [whitespace], logical_operator, [whitespace], expression | logical_not, [whitespace], expression
+logical_expression ::= expression, logical_operator, expression | logical_not, expression
 
-comparison_expression ::= expression, [whitespace], comparison_operator, [whitespace], expression
+comparison_expression ::= expression, comparison_operator, expression
 
-arithmetic_expression ::= expression, [whitespace], arithmetic_operator, [whitespace], expression
+arithmetic_expression ::= expression, arithmetic_operator, expression
 
-list_expression ::= "[", newline_and_or_whitespace, "]" | "[", newline_and_or_whitespace, expression, newline_and_or_whitespace, {",", newline_and_or_whitespace, expression, newline_and_or_whitespace}, "]"
+list_expression ::= "[", "]" | "[", expression, {",", expression}, "]"
 
-expression ::= identifier | number | string | boolean | list_expression | "(", [whitespace], expression, [whitespace], ")" | arithmetic_expression | logical_expression | comparison_expression
+function_call ::= identifier, "(" (")" | expression, {",", expression}, ")")
+
+expression ::= identifier | number | string | boolean | list_expression | "(", expression, ")" | arithmetic_expression | logical_expression | comparison_expression | function_call
 
 evaluable ::= logical_expression | arithmetic_expression | assignment | definition | definition_and_assignment
 
-newline_and_or_whitespace ::= [newline], [whitespace], [newline]
+body ::= "{", program, "}"
 
-body ::= "{", newline_and_or_whitespace, program, newline_and_or_whitespace "}"
+while_statement ::= ["please"], "while", "(", expression, ")", body
 
-while_statement ::= ["please", whitespace], "while", [whitespace], "(", [whitespace], expression, [whitespace], ")", newline_and_or_whitespace, body
-
-for_statement ::= ["please", whitespace], "for", [whitespace], "(", [whitespace], [evaluable], [whitespace], ";", [whitespace], [expression], [whitespace], ";", [whitespace], [expression], [whitespace], ")", newline_and_or_whitespace, body
+for_statement ::= ["please"], "for", "(", [evaluable], ";", [expression], ";", [expression], ")", body
 
 iteration_statement ::= while_statement | for_statement
 
-if_structure ::= "if", [whitespace], "(", [whitespace], expression, [whitespace], ")", newline_and_or_whitespace, body, [newline_and_or_whitespace, "else", newline_and_or_whitespace, body | if_structure]
+if_structure ::= "if", "(", expression, ")", body, ["else", (body | if_structure)]
 
-if_statement ::= ["please", whitespace], if_structure
+if_statement ::= ["please"], if_structure
 
-break_statement ::= "break", [whitespace, "please"]
+break_statement ::= "break", ["please"]
 
-continue_statement ::= "continue", [whitespace, "please"]
+continue_statement ::= "continue", ["please"]
 
-return_statement ::= "return", [whitespace, expression], [whitespace, "please"]
+return_statement ::= "return", [expression], ["please"]
 
 jump_statement ::= break_statement | return_statement | continue_statement
 
-expression_statement ::= expression, [whitespace, "please"]
+expression_statement ::= expression, ["please"]
 
 initialization_statement ::= definition | definition_and_assignment | assignment
 
 statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
-function ::= ["please", whitespace], ["thanks", whitespace], "fun", whitespace, identifier, [whitespace], "(", [whitespace], ")" | identifier, {[whitespace], ",", [whitespace], identifier}, [whitespace], ")", newline_and_or_whitespace, body
+function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, {, ",", identifier}, ")"), body
 
 comment ::= single_line_comment | multi_line_comment
 
@@ -90,6 +88,6 @@ single_line_comment ::= "//", {any symbol}, (newline | eof)
 
 multi_line_comment ::= "/*", {any symbol}, "*/
 
-program ::= newline_and_or_whitespace | newline_and_or_whitespace, statement, {[whitespace], newline, [whitespace], [statement], newline_and_or_whitespace}
+program ::= "" | statement, {newline, statement}
 
 start ::= program

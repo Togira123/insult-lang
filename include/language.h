@@ -1,5 +1,4 @@
 enum token_type {
-    WHITESPACE,
     NEWLINE,
     DOUBLE,
     INT,

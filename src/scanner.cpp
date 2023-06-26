@@ -402,9 +402,7 @@ vector<token>& scan_program(int argc, char* argv[]) {
     int line = 1;
     while (c != EOF) {
         string result;
-        if ((result = whitespace(buffer, index, fence)) != "") {
-            token_list.push_back({WHITESPACE, result});
-        } else if ((result = newline(buffer, index, fence, line)) != "") {
+        if ((result = newline(buffer, index, fence, line)) != "") {
             token_list.push_back({NEWLINE, result});
         } else if ((result = comment(buffer, index, fence)) != "") {
             token_list.push_back({COMMENT, result});
@@ -438,6 +436,8 @@ vector<token>& scan_program(int argc, char* argv[]) {
             token_list.push_back({DATA_TYPE, result});
         } else if ((result = punctuation(buffer, index)) != "") {
             token_list.push_back({PUNCTUATION, result});
+        } else if ((result = whitespace(buffer, index, fence)) != "") {
+            // whitespace – ignore
         } else {
             // replace later with a random program
             throw runtime_error("unknown token at line " + to_string(line) + ": " + string(1, c) + "\n");
