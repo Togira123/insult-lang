@@ -58,7 +58,7 @@ body ::= "{", program, "}"
 
 while_statement ::= ["please"], "while", "(", expression, ")", body
 
-for_statement ::= ["please"], "for", "(", [evaluable], ";", [expression], ";", [expression], ")", body
+for_statement ::= ["please"], "for", "(", [evaluable], ";", [expression], ";", [evaluable], ")", body
 
 iteration_statement ::= while_statement | for_statement
 
@@ -80,7 +80,7 @@ initialization_statement ::= definition | definition_and_assignment | assignment
 
 statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
-function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, {, ",", identifier}, ")"), body
+function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), body
 
 comment ::= single_line_comment | multi_line_comment
 
