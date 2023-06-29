@@ -405,7 +405,7 @@ vector<token>& scan_program(int argc, char* argv[]) {
         if ((result = newline(buffer, index, fence, line)) != "") {
             token_list.push_back({NEWLINE, result});
         } else if ((result = comment(buffer, index, fence)) != "") {
-            token_list.push_back({COMMENT, result});
+            // scanned comment, do not add to token_list
         } else if ((result = double_token(buffer, index, fence)) != "") {
             token_list.push_back({DOUBLE, result});
         } else if ((result = integer(buffer, index, fence)) != "") {
@@ -423,7 +423,7 @@ vector<token>& scan_program(int argc, char* argv[]) {
         } else if ((result = identifier(buffer, index, fence)) != "") {
             if (result == "true" || result == "false") {
                 token_list.push_back({BOOL, result});
-            } else if (result == "if" || result == "else" || result == "break" || result == "continue" || result == "continue") {
+            } else if (result == "if" || result == "else" || result == "break" || result == "continue" || result == "return") {
                 token_list.push_back({CONTROL, result});
             } else if (result == "for" || result == "while") {
                 token_list.push_back({ITERATION, result});
