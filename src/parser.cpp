@@ -10,24 +10,26 @@ inline bool newline();
 
 struct t {
     const token& next(bool skip_newline = true) {
+        if (token_list->at(index).name == END_OF_INPUT) {
+            return token_list->at(index);
+        }
+        index++;
         if (skip_newline) {
             while (newline()) {
                 index++;
             }
         }
-        if (token_list->at(index).name != END_OF_INPUT) {
-            return token_list->at(++index);
-        }
         return token_list->at(index);
     }
     const token& previous(bool skip_newline = true) {
+        if (token_list->at(index).name == END_OF_INPUT) {
+            return token_list->at(index);
+        }
+        index--;
         if (skip_newline) {
             while (newline()) {
                 index--;
             }
-        }
-        if (token_list->at(index).name != END_OF_INPUT) {
-            return token_list->at(--index);
         }
         return token_list->at(index);
     }
@@ -52,6 +54,11 @@ inline bool expression(int iteration = 0);
 inline bool identifier() {
     // syntax of identifier already checked when scanning
     return tokens.current().name == IDENTIFIER;
+}
+
+inline bool data_type() {
+    // syntax of data_type already checked when scanning
+    return tokens.current().name == DATA_TYPE;
 }
 
 inline bool is_valid_int(const string& value) {
@@ -229,8 +236,111 @@ bool while_statement() {
             if (expression()) {
                 tokens.next();
                 if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
+                    tokens.next();
                     if (body()) {
                         return true;
+                    }
+                }
+            }
+        }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
+
+bool partial_assignment() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == PUNCTUATION && tokens.current().value == "=") {
+        tokens.next();
+        if (expression()) {
+            tokens.next();
+            if (tokens.current().name != GENERAL_KEYWORD || tokens.current().value != "please") {
+                tokens.previous();
+            }
+            return true;
+        }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
+
+bool assignment() {
+    if (identifier()) {
+        tokens.next();
+        if (partial_assignment()) {
+            return true;
+        }
+        tokens.previous();
+    }
+    return false;
+}
+
+// taking both definition and definition_and_assignment into the same function for speed improvement
+bool definition_or_definition_and_assignment() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "def") {
+        tokens.next();
+        if (identifier()) {
+            tokens.next();
+            if (tokens.current().name == PUNCTUATION && tokens.current().value == ":") {
+                tokens.next();
+                if (data_type()) {
+                    tokens.next();
+                    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+                        // definition
+                        return true;
+                    } else if (partial_assignment()) {
+                        // definition and assignment
+                        return true;
+                    } else {
+                        // definition without please at the end
+                        return true;
+                    }
+                }
+            } else if (partial_assignment()) {
+                return true;
+            }
+        }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
+
+inline bool evaluable() { return logical_expression() || arithmetic_expression() || assignment() || definition_or_definition_and_assignment(); }
+
+bool for_statement() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+        tokens.next();
+    }
+    if (tokens.current().name == ITERATION && tokens.current().value == "for") {
+        tokens.next();
+        if (tokens.current().name == PUNCTUATION && tokens.current().value == "(") {
+            tokens.next();
+            if (evaluable()) {
+                tokens.next();
+            }
+            if (tokens.current().name == PUNCTUATION && tokens.current().value == ";") {
+                tokens.next();
+                if (expression()) {
+                    tokens.next();
+                }
+                if (tokens.current().name == PUNCTUATION && tokens.current().value == ";") {
+                    tokens.next();
+                    if (evaluable()) {
+                        tokens.next();
+                    }
+                    if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
+                        tokens.next();
+                        if (body()) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -273,22 +383,172 @@ bool function_call() {
     return false;
 }
 
-inline bool iteration_statement() { return while_statement() /*  || for_statement() */; }
+inline bool iteration_statement() { return while_statement() || for_statement(); }
 
-inline bool expression_statement() {
-    if (expression()) {
+bool if_structure() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == CONTROL && tokens.current().value == "if") {
         tokens.next();
-        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
-            return true;
-        } else {
-            tokens.previous();
-            return true;
+        if (tokens.current().name == PUNCTUATION && tokens.current().value == "(") {
+            tokens.next();
+            if (expression()) {
+                tokens.next();
+                if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
+                    tokens.next();
+                    if (body()) {
+                        tokens.next();
+                        if (tokens.current().name == CONTROL && tokens.current().value == "else") {
+                            tokens.next();
+                            // else if chain
+                            if (body() || if_structure()) {
+                                return true;
+                            }
+                        } else {
+                            tokens.previous();
+                            // simple if statement
+                            return true;
+                        }
+                    }
+                }
+            }
         }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
     }
     return false;
 }
 
-inline bool statement() { return iteration_statement() || expression_statement(); }
+bool if_statement() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value != "please") {
+        tokens.next();
+    }
+    if (if_structure()) {
+        return true;
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
+
+inline bool break_statement() {
+    if (tokens.current().name == CONTROL && tokens.current().value == "break") {
+        tokens.next();
+        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+            return true;
+        }
+        tokens.previous();
+        return true;
+    }
+    return false;
+}
+
+inline bool return_statement() {
+    if (tokens.current().name == CONTROL && tokens.current().value == "return") {
+        tokens.next();
+        if (expression()) {
+            tokens.next();
+        }
+        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+            return true;
+        }
+        tokens.previous();
+        return true;
+    }
+    return false;
+}
+
+inline bool continue_statement() {
+    if (tokens.current().name == CONTROL && tokens.current().value == "continue") {
+        tokens.next();
+        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+            return true;
+        }
+        tokens.previous();
+        return true;
+    }
+    return false;
+}
+
+inline bool jump_statement() { return break_statement() || return_statement() || continue_statement(); }
+
+bool function_statement() {
+    int cur_ind = tokens.current_index();
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "please") {
+        tokens.next();
+    }
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "thanks") {
+        tokens.next();
+    }
+    if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value == "fun") {
+        tokens.next();
+        if (identifier()) {
+            tokens.next();
+            if (tokens.current().name == PUNCTUATION && tokens.current().value == "(") {
+                tokens.next();
+                if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
+                    tokens.next();
+                    if (body()) {
+                        return true;
+                    }
+                } else if (identifier()) {
+                    tokens.next();
+                    if (tokens.current().name == PUNCTUATION && tokens.current().value == ":") {
+                        tokens.next();
+                        if (data_type()) {
+                            tokens.next();
+                            while (true) {
+                                if (tokens.current().name == PUNCTUATION && tokens.current().value == ",") {
+                                    tokens.next();
+                                    if (identifier()) {
+                                        tokens.next();
+                                        if (tokens.current().name == PUNCTUATION && tokens.current().value == ":") {
+                                            tokens.next();
+                                            if (data_type()) {
+                                                tokens.next();
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                } else if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
+                                    tokens.next();
+                                    if (body()) {
+                                        return true;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
+
+inline bool expression_statement() {
+    if (expression()) {
+        tokens.next();
+        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value != "please") {
+            tokens.previous();
+        }
+        return true;
+    }
+    return false;
+}
+
+inline bool initialization_statement() { return definition_or_definition_and_assignment() || assignment(); }
+
+inline bool statement() {
+    return iteration_statement() || if_statement() || jump_statement() || function_statement() || initialization_statement() ||
+           expression_statement();
+}
 
 inline bool expression(int iteration) {
     return (iteration == 0 && (arithmetic_expression() || logical_expression() || comparison_expression())) ||
@@ -296,16 +556,17 @@ inline bool expression(int iteration) {
 }
 
 bool program() {
+    if (newline()) {
+        tokens.next();
+    }
     if (statement()) {
         // check for newlines since they matter here
         tokens.next(false);
         while (true) {
             if (newline()) {
-                tokens.next();
+                // can safely be false because the next token cannot be a newline
+                tokens.next(false);
                 if (statement()) {
-                    tokens.next(false);
-                } else {
-                    tokens.previous();
                     tokens.next(false);
                 }
             } else {
@@ -318,9 +579,9 @@ bool program() {
 
 int main(int argc, char* argv[]) {
     auto& token_list = scan_program(argc, argv);
-    for (auto& el : token_list) {
+    /* for (auto& el : token_list) {
         cout << el.name << ": " << el.value << "\n";
-    }
+    } */
     tokens.init(token_list);
     if (tokens.current().name == END_OF_INPUT) {
         // empty file
