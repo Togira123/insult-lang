@@ -151,55 +151,19 @@ inline bool logical_operator() { return tokens.current().name == LOGICAL_OPERATO
 
 inline bool comparison_operator() { return tokens.current().name == COMPARISON_OPERATOR; }
 
-bool arithmetic_expression() {
+bool comparison_or_arithmetic_expression_or_logical_expression() {
     int cur_ind = tokens.current_index();
     if (expression(1)) {
         tokens.next();
-        if (arithmetic_operator()) {
+        if (comparison_operator() || arithmetic_operator() || logical_operator()) {
             tokens.next();
             if (expression()) {
                 return true;
             }
         }
-    }
-    while (cur_ind < tokens.current_index()) {
-        tokens.previous();
-    }
-    return false;
-}
-
-bool logical_expression() {
-    int cur_ind = tokens.current_index();
-    if (tokens.current().name == LOGICAL_NOT) {
+    } else if (tokens.current().name == LOGICAL_NOT) {
         if (expression(1)) {
             return true;
-        }
-    } else {
-        if (expression(1)) {
-            tokens.next();
-            if (logical_operator()) {
-                tokens.next();
-                if (expression()) {
-                    return true;
-                }
-            }
-        }
-    }
-    while (cur_ind < tokens.current_index()) {
-        tokens.previous();
-    }
-    return false;
-}
-
-bool comparison_expression() {
-    int cur_ind = tokens.current_index();
-    if (expression(1)) {
-        tokens.next();
-        if (comparison_operator()) {
-            tokens.next();
-            if (expression()) {
-                return true;
-            }
         }
     }
     while (cur_ind < tokens.current_index()) {
@@ -312,7 +276,7 @@ bool definition_or_definition_and_assignment() {
     return false;
 }
 
-inline bool evaluable() { return logical_expression() || arithmetic_expression() || assignment() || definition_or_definition_and_assignment(); }
+inline bool evaluable() { return assignment() || definition_or_definition_and_assignment(); }
 
 bool for_statement() {
     int cur_ind = tokens.current_index();
@@ -551,7 +515,7 @@ inline bool statement() {
 }
 
 inline bool expression(int iteration) {
-    return (iteration == 0 && (arithmetic_expression() || logical_expression() || comparison_expression())) ||
+    return (iteration == 0 && comparison_or_arithmetic_expression_or_logical_expression()) ||
            (function_call() || identifier() || number() || string_token() || boolean() || list_expression() || parenthesed_expression());
 }
 
@@ -588,8 +552,12 @@ int main(int argc, char* argv[]) {
         cout << "success!\n";
         return 0;
     }
+    // auto start_time = std::chrono::system_clock::now();
     if (program()) {
         if (tokens.next().name == END_OF_INPUT) {
+            /* auto end_time = std::chrono::system_clock::now();
+            auto difference = end_time - start_time;
+            cout << difference.count() << "\n"; */
             cout << "success!\n";
             return 0;
         }
