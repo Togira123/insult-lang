@@ -162,6 +162,7 @@ bool comparison_or_arithmetic_expression_or_logical_expression() {
             }
         }
     } else if (tokens.current().name == LOGICAL_NOT) {
+        tokens.next();
         if (expression(1)) {
             return true;
         }
@@ -543,9 +544,6 @@ bool program() {
 
 int main(int argc, char* argv[]) {
     auto& token_list = scan_program(argc, argv);
-    /* for (auto& el : token_list) {
-        cout << el.name << ": " << el.value << "\n";
-    } */
     tokens.init(token_list);
     if (tokens.current().name == END_OF_INPUT) {
         // empty file
