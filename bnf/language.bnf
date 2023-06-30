@@ -52,7 +52,7 @@ function_call ::= identifier, "(" (")" | expression, {",", expression}, ")")
 
 expression ::= identifier | number | string | boolean | list_expression | "(", expression, ")" | arithmetic_expression | logical_expression | comparison_expression | function_call
 
-evaluable ::= logical_expression | arithmetic_expression | assignment | definition | definition_and_assignment
+evaluable ::= assignment | definition | definition_and_assignment
 
 body ::= "{", program, "}"
 
@@ -80,7 +80,7 @@ initialization_statement ::= definition | definition_and_assignment | assignment
 
 statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
-function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), body
+function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), [":", datatype], body
 
 comment ::= single_line_comment | multi_line_comment
 
