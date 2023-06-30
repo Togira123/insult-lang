@@ -211,14 +211,14 @@ string string_token(vector<char>& buffer, int& index, int& fence) {
     }
     char c = next_char(buffer, index, fence);
     string result = "";
-    bool ignore_next = c == '\\';
+    bool ignore_next = false;
     while (c != EOF && (c != '"' || ignore_next)) {
-        result += c;
         if (c == '\\' && !ignore_next) {
             ignore_next = true;
         } else {
             ignore_next = false;
         }
+        result += c;
         c = next_char(buffer, index, fence);
     }
     if (c == EOF) {
