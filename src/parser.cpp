@@ -329,7 +329,9 @@ bool function_call() {
                 tokens.next();
                 while (true) {
                     if (tokens.current().name == PUNCTUATION && tokens.current().value == ",") {
+                        tokens.next();
                         if (expression()) {
+                            tokens.next();
                             continue;
                         }
                         break;
@@ -576,6 +578,6 @@ int main(int argc, char* argv[]) {
             return 0;
         }
     }
-
     cout << "fail!\n";
+    return 1;
 }

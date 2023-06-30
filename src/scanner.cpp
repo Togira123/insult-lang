@@ -117,6 +117,7 @@ string double_token(vector<char>& buffer, int& index, int& fence) {
         }
         return "";
     }
+    result += ".";
     c = next_char(buffer, index, fence);
     if (c < '0' || c > '9') {
         for (int i = 0; i < (int)result.length() + 1; i++) {
