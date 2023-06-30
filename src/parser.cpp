@@ -22,7 +22,7 @@ struct t {
         return token_list->at(index);
     }
     const token& previous(bool skip_newline = true) {
-        if (token_list->at(index).name == END_OF_INPUT) {
+        if (index == 0) {
             return token_list->at(index);
         }
         index--;
@@ -455,7 +455,15 @@ bool function_statement() {
                 tokens.next();
                 if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
-                    if (body()) {
+                    if (tokens.current().name == PUNCTUATION && tokens.current().value == ":") {
+                        tokens.next();
+                        if (data_type()) {
+                            tokens.next();
+                            if (body()) {
+                                return true;
+                            }
+                        }
+                    } else if (body()) {
                         return true;
                     }
                 } else if (identifier()) {
@@ -479,6 +487,14 @@ bool function_statement() {
                                     }
                                 } else if (tokens.current().name == PUNCTUATION && tokens.current().value == ")") {
                                     tokens.next();
+                                    if (tokens.current().name == PUNCTUATION && tokens.current().value == ":") {
+                                        tokens.next();
+                                        if (data_type()) {
+                                            tokens.next();
+                                        } else {
+                                            break;
+                                        }
+                                    }
                                     if (body()) {
                                         return true;
                                     }
@@ -500,7 +516,7 @@ bool function_statement() {
 inline bool expression_statement() {
     if (expression()) {
         tokens.next();
-        if (tokens.current().name == GENERAL_KEYWORD && tokens.current().value != "please") {
+        if (tokens.current().name != GENERAL_KEYWORD || tokens.current().value != "please") {
             tokens.previous();
         }
         return true;
