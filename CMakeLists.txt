@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -g3 -ggdb3 -D_GLIBCXX_DEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_BUILD_TYPE Debug)
 project(insult)
+include(CTest)
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/src
@@ -17,3 +18,4 @@ file(GLOB all_srcs
     ${PROJECT_SOURCE_DIR}/src/*.cpp
 )
 add_executable(a.out ${all_srcs})
+add_test(NAME parser_test COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/input1.txt)
