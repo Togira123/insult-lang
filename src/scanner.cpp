@@ -8,7 +8,7 @@
 const int N = 128;
 
 std::ifstream file;
-std::vector<token> token_list = {{END_OF_INPUT, ""}};
+std::vector<token> token_list = {{token_type::END_OF_INPUT, ""}};
 
 // makes sure the buffer is only filled when necessary
 bool last_fill_at_zero = true;
@@ -402,39 +402,39 @@ std::vector<token>& scan_program(int argc, char* argv[]) {
     while (c != EOF) {
         std::string result;
         if ((result = newline(buffer, index, fence, line)) != "") {
-            token_list.push_back({NEWLINE, result});
+            token_list.push_back({token_type::NEWLINE, result});
         } else if ((result = comment(buffer, index, fence)) != "") {
             // scanned comment, do not add to token_list
         } else if ((result = double_token(buffer, index, fence)) != "") {
-            token_list.push_back({DOUBLE, result});
+            token_list.push_back({token_type::DOUBLE, result});
         } else if ((result = integer(buffer, index, fence)) != "") {
-            token_list.push_back({INT, result});
+            token_list.push_back({token_type::INT, result});
         } else if ((result = arithmetic_operator(buffer, index)) != "") {
-            token_list.push_back({ARITHMETIC_OPERATOR, result});
+            token_list.push_back({token_type::ARITHMETIC_OPERATOR, result});
         } else if ((result = logical_operator(buffer, index, fence)) != "") {
-            token_list.push_back({LOGICAL_OPERATOR, result});
+            token_list.push_back({token_type::LOGICAL_OPERATOR, result});
         } else if ((result = comparison_operator(buffer, index, fence)) != "") {
-            token_list.push_back({COMPARISON_OPERATOR, result});
+            token_list.push_back({token_type::COMPARISON_OPERATOR, result});
         } else if ((result = logicalnot(buffer, index)) != "") {
-            token_list.push_back({LOGICAL_NOT, result});
+            token_list.push_back({token_type::LOGICAL_NOT, result});
         } else if ((result = string_token(buffer, index, fence)) != "") {
-            token_list.push_back({STRING, result});
+            token_list.push_back({token_type::STRING, result});
         } else if ((result = identifier(buffer, index, fence)) != "") {
             if (result == "true" || result == "false") {
-                token_list.push_back({BOOL, result});
+                token_list.push_back({token_type::BOOL, result});
             } else if (result == "if" || result == "else" || result == "break" || result == "continue" || result == "return") {
-                token_list.push_back({CONTROL, result});
+                token_list.push_back({token_type::CONTROL, result});
             } else if (result == "for" || result == "while") {
-                token_list.push_back({ITERATION, result});
+                token_list.push_back({token_type::ITERATION, result});
             } else if (result == "please" || result == "thanks" || result == "def" || result == "fun") {
-                token_list.push_back({GENERAL_KEYWORD, result});
+                token_list.push_back({token_type::GENERAL_KEYWORD, result});
             } else {
-                token_list.push_back({IDENTIFIER, result});
+                token_list.push_back({token_type::IDENTIFIER, result});
             }
         } else if ((result = data_type(buffer, index, fence)) != "") {
-            token_list.push_back({DATA_TYPE, result});
+            token_list.push_back({token_type::DATA_TYPE, result});
         } else if ((result = punctuation(buffer, index)) != "") {
-            token_list.push_back({PUNCTUATION, result});
+            token_list.push_back({token_type::PUNCTUATION, result});
         } else if ((result = whitespace(buffer, index, fence)) != "") {
             // whitespace – ignore
         } else {
@@ -444,6 +444,6 @@ std::vector<token>& scan_program(int argc, char* argv[]) {
         c = next_char(buffer, index, fence);
     }
     file.close();
-    token_list.push_back({END_OF_INPUT, ""});
+    token_list.push_back({token_type::END_OF_INPUT, ""});
     return token_list;
 }

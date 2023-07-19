@@ -1,4 +1,4 @@
-enum token_type {
+enum class token_type {
     NEWLINE,
     DOUBLE,
     INT,
