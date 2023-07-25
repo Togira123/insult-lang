@@ -1,19 +1,21 @@
-def i = 2 please
+def i = -2 please
+def j = -3 + 4 * 2 - true || false please
 def k = i + j please
 def l: int please
 thanks fun f(a: string, b: double): int {
-    return a + b
+    return a + -b
 }
 please for (def a = 0; a < 10; a = a +1 ) {
     print(a)
 }
 
+
 def sdkafdlsaj = "\\" please
 
 please while(i <= 10) {
-    i = i + 1 please
+    i = i + -1 please
     def a: int[] = [
-        1, 2, 3, 4, 5
+        1, -2, 3, +4, 5
     ] please
 }
 
@@ -21,9 +23,9 @@ if (a) {
     def abc: string please
     abc = "this is a cool string" please
 } else if (abc == "some other string") {
-    def boo: bool = true please
+    def boo: bool = !true please
 } else {
     def some_char = "c" please
     def some_double = 18.4321
-    def some_int = f(some_char, some_double) please
+    def some_int = f(some_char, some_double, 2- 3) please
 }
