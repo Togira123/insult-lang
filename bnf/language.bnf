@@ -18,7 +18,9 @@ digit_except_zero ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 
 digit ::= "0" | digit_except_zero
 
-integer ::= ["-"], ("0" | (digit_except_zero, {digit}))
+unary_plus_or_minus ::= "+" | "-"
+
+integer ::= "0" | (digit_except_zero, {digit})
 
 double ::= integer, ".", digit, {digit}
 
@@ -48,9 +50,11 @@ arithmetic_expression ::= expression, arithmetic_operator, expression
 
 list_expression ::= "[", "]" | "[", expression, {",", expression}, "]"
 
-function_call ::= identifier, "(" (")" | expression, {",", expression}, ")")
+function_call ::= identifier, "(" (")" | expression, {",", expression}, ")"), {"(" (")" | expression, {",", expression}, ")")}
 
-expression ::= identifier | number | string | boolean | list_expression | "(", expression, ")" | arithmetic_expression | logical_expression | comparison_expression | function_call
+array_access ::= identifier, "[", expression, "]", {"[", expression, "]"}
+
+expression ::= [unary_plus_or_minus], (identifier | number | string | boolean | list_expression | "(", expression, ")" | arithmetic_expression | logical_expression | comparison_expression | function_call | array_access)
 
 evaluable ::= assignment | definition | definition_and_assignment
 

@@ -86,7 +86,8 @@ std::string newline(std::vector<char>& buffer, int& index, int& fence, int& line
 }
 
 std::string integer(std::vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) != '-' && (cur_char(buffer, index) < '0' || cur_char(buffer, index) > '9')) {
+    // the "-" or "+" signs integers may have are not included here since they're viewed as unary operators on integers
+    if (cur_char(buffer, index) < '0' || cur_char(buffer, index) > '9') {
         return "";
     }
     std::string result = "";
@@ -97,9 +98,6 @@ std::string integer(std::vector<char>& buffer, int& index, int& fence) {
         c = next_char(buffer, index, fence);
     }
     rollback(index, fence);
-    if (result == "-") {
-        return "";
-    }
     return result;
 }
 
