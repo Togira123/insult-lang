@@ -8,6 +8,8 @@ enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, FUNCTION_TYPE,
 
 struct function_detail;
 
+struct intermediate_representation;
+
 struct full_type {
     types type;
     // only applicable if type == ARRAY
@@ -64,10 +66,14 @@ struct identifier_detail {
     // will be unknown at the start and determined later, mostly by accessing the referenced expression used at definition time or if not present by
     // looking at other stuff
     full_type type;
-    // references the expression that initialized this identifier. Negative if not applicable
+    // references the expression that initialized this identifier. Negative if not applicable yet
+    // if initialized_with_definition is false, this will take the value of the first expression that is assigned to this variable
     int initializing_expression;
-    // whether the variable has been initialized
-    bool initialized;
+    // whether the variable has been initialized during definition
+    bool initialized_with_definition;
+    // whether this identifier is constant or not, meaning whether it keeps its initial value or changes it
+    // used to optimize code afterwards
+    bool is_constant = true;
 };
 
 enum class node_type { IDENTIFIER, PUNCTUATION, OPERATOR, INT, DOUBLE, BOOL, STRING, FUNCTION_CALL, ARRAY_ACCESS, LIST };
@@ -87,6 +93,10 @@ struct expression_tree {
             right = std::make_unique<expression_tree>(*other.right);
         }
     }
+    // TODO: update this to return true/false based on the expression after it is evaluated
+    bool operator==(const expression_tree& other) {
+        return node == other.node && type == other.type && *left == *other.left && *right == *other.right;
+    }
 };
 
 struct identifier_scopes {
@@ -94,13 +104,18 @@ struct identifier_scopes {
     int level;
     // the identifiers declared on that level, with the identifier name as string
     std::unordered_map<std::string, identifier_detail> identifiers;
+    // all assignments happening in the current scope (excluding definitions that are assignments too)
+    // key of the map is the identifier being assigned to something
+    // value of the map is the index of the expression the identifier is being assigned
+    std::unordered_map<std::string, std::vector<int>> assignments;
     std::unordered_map<std::string, function_detail> functions;
-    identifier_scopes(int l = 0, std::unordered_map<std::string, identifier_detail> i = {}, std::unordered_map<std::string, function_detail> f = {})
-        : level(l), identifiers(i), functions(f), upper(nullptr), lower({}), index(0){};
+    identifier_scopes(intermediate_representation* ir_pointer, int l = 0, std::unordered_map<std::string, identifier_detail> i = {},
+                      std::unordered_map<std::string, function_detail> f = {})
+        : level(l), identifiers(i), functions(f), upper(nullptr), lower({}), index(0), ir(ir_pointer){};
     // used to create a new scope just below the level of this scope
     // returns a pointer to the newly created scope
     identifier_scopes* new_scope() {
-        lower.push_back({level + 1});
+        lower.push_back({ir, level + 1});
         lower.back().upper = this;
         lower.back().index = lower.size() - 1;
         return &lower.back();
@@ -127,6 +142,8 @@ private:
     std::vector<identifier_scopes> lower;
     // index of this scope in the upper scope's "lower" vector
     int index;
+    // the ir this struct is (indirectly) referenced from
+    intermediate_representation* ir;
 };
 
 struct intermediate_representation {
@@ -149,4 +166,10 @@ struct intermediate_representation {
     // holds all expressions that appear in the whole program
     // they can easily be accessed by indexes in this vector
     std::vector<expression_tree> expressions;
+    intermediate_representation(identifier_scopes s, std::unordered_map<int, std::pair<int, std::string>> f_calls = {},
+                                std::unordered_map<int, std::pair<int, std::string>> a_accesses = {},
+                                std::unordered_map<int, std::pair<int, std::string>> initial_lists = {},
+                                std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {})
+        : scopes(s), function_calls(f_calls), array_accesses(a_accesses), lists(initial_lists), unary_operator_indexes(unary_op_indexes),
+          expressions(exp){};
 };

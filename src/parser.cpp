@@ -48,7 +48,8 @@ private:
 
 t tokens;
 
-intermediate_representation ir;
+// need second argument just to prevent ambiguity
+intermediate_representation ir({&ir}, {});
 
 identifier_scopes* current_scope = &ir.scopes;
 
@@ -469,7 +470,7 @@ bool assignment() {
         std::string identifier_name = tokens.current().value;
         tokens.next();
         if (partial_assignment()) {
-            // check whether idenfifier exists
+            current_scope->assignments[identifier_name].push_back((int)ir.expressions.size() - 1);
             return true;
         }
         tokens.previous();
@@ -495,7 +496,7 @@ bool definition_or_definition_and_assignment() {
                         return true;
                     } else if (partial_assignment()) {
                         // definition and assignment
-                        current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, false};
+                        current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, true};
                         return true;
                     } else {
                         // definition without please at the end
@@ -504,7 +505,7 @@ bool definition_or_definition_and_assignment() {
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, false};
+                current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, true};
                 return true;
             }
         }
