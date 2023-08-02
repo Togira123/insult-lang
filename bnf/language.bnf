@@ -36,11 +36,11 @@ data_type ::= raw_data_type, {"[]"}
 
 identifier ::= letter | "_", {letter | digit | "_"}
 
-assignment ::= identifier, "=", expression, ["please"]
+assignment ::= identifier, "=", expression
 
-definition ::= "def", identifier, ":", data_type, ["please"]
+definition ::= "def", identifier, ":", data_type
 
-definition_and_assignment ::= "def", identifier, [":", data_type], "=", expression, ["please"]
+definition_and_assignment ::= "def", identifier, [":", data_type], "=", expression
 
 logical_expression ::= expression, logical_operator, expression | logical_not, expression
 
@@ -60,15 +60,15 @@ evaluable ::= assignment | definition | definition_and_assignment
 
 body ::= "{", program, "}"
 
-while_statement ::= ["please"], "while", "(", expression, ")", body
+while_statement ::= ["thanks"], "while", "(", expression, ")", body
 
-for_statement ::= ["please"], "for", "(", [evaluable], ";", [expression], ";", [evaluable], ")", body
+for_statement ::= ["thanks"], "for", "(", [evaluable], ";", [expression], ";", [evaluable], ")", body
 
 iteration_statement ::= while_statement | for_statement
 
 if_structure ::= "if", "(", expression, ")", body, ["else", (body | if_structure)]
 
-if_statement ::= ["please"], if_structure
+if_statement ::= ["thanks"], if_structure
 
 break_statement ::= "break", ["please"]
 
@@ -80,11 +80,11 @@ jump_statement ::= break_statement | return_statement | continue_statement
 
 expression_statement ::= expression, ["please"]
 
-initialization_statement ::= definition | definition_and_assignment | assignment
+initialization_statement ::= (definition | definition_and_assignment | assignment), ["please"]
 
 statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
-function ::= ["please"], ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), [":", datatype], body
+function ::= ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), [":", datatype], body
 
 comment ::= single_line_comment | multi_line_comment
 
