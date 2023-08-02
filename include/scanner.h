@@ -1,4 +1,4 @@
 #include "util.h"
-#include <vector>
+#include <list>
 
-std::vector<token>& scan_program(int argc, char* argv[]);
+std::list<token>& scan_program(int argc, char* argv[]);

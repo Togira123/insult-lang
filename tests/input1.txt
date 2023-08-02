@@ -5,14 +5,14 @@ def l: int please
 thanks fun f(a: string, b: double): int {
     return a + -b
 }
-please for (def a = 0; a < 10; a = a +1 ) {
+thanks for (def a = 0; a < 10; a = a +1 ) {
     print(a)
 }
 
 
 def sdkafdlsaj = "\\" please
 
-please while(i <= 10) {
+while(i <= 10) {
     i = i + -1 please
     def a: int[] = [
         1, -2, 3, +4, 5

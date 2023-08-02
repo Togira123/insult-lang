@@ -1,6 +1,7 @@
 #include "../include/scanner.h"
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <stack>
 #include <string>
 #include <vector>
@@ -8,7 +9,7 @@
 const int N = 128;
 
 std::ifstream file;
-std::vector<token> token_list = {{token_type::END_OF_INPUT, ""}};
+std::list<token> token_list = {{token_type::END_OF_INPUT, ""}};
 
 // makes sure the buffer is only filled when necessary
 bool last_fill_at_zero = true;
@@ -374,7 +375,7 @@ std::string comment(std::vector<char>& buffer, int& index, int& fence) {
     }
 }
 
-std::vector<token>& scan_program(int argc, char* argv[]) {
+std::list<token>& scan_program(int argc, char* argv[]) {
     if (argc < 2) {
         throw std::runtime_error("Specify program to compile!");
     }

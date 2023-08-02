@@ -1,7 +1,8 @@
-#include "../include/ir.h"
+#include "../include/parser.h"
 #include "../include/scanner.h"
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <queue>
 #include <stack>
 #include <string>
@@ -12,38 +13,50 @@ inline bool newline();
 
 struct t {
     const token& next(bool skip_newline = true) {
-        if (token_list->at(index).name == token_type::END_OF_INPUT) {
-            return token_list->at(index);
+        if (it->name == token_type::END_OF_INPUT) {
+            return *it;
         }
+        it++;
         index++;
         if (skip_newline) {
             while (newline()) {
+                it++;
                 index++;
             }
         }
-        return token_list->at(index);
+        return *it;
     }
     const token& previous(bool skip_newline = true) {
-        if (index == 0) {
-            return token_list->at(index);
+        if (it == token_list->begin()) {
+            return *it;
         }
+        it--;
         index--;
         if (skip_newline) {
             while (newline()) {
+                it--;
                 index--;
             }
         }
-        return token_list->at(index);
+        return *it;
     }
-    const token& current() { return token_list->at(index); }
+    const token& current() { return *it; }
     int current_index() { return index; }
-    t(std::vector<token>* token_list = nullptr) : token_list(token_list) {}
-    void init(std::vector<token>& list) { token_list = &list; }
+    std::list<token>::iterator iterator_at_current_pos() { return it; }
+    void insert_at(std::list<token>::iterator it2, token t) { token_list->insert(it2, std::move(t)); }
+    t(std::list<token>* token_list = nullptr) : token_list(token_list) {}
+    void init(std::list<token>& list) {
+        token_list = &list;
+        it = token_list->begin();
+        // skip first element as it is END_OF_INPUT
+        it++;
+        index = 1;
+    }
 
 private:
-    std::vector<token>* token_list;
-    // has to be one because at index 0 we got the END_OF_INPUT token
-    int index = 1;
+    std::list<token>* token_list;
+    std::list<token>::iterator it;
+    int index;
 };
 
 t tokens;
@@ -53,7 +66,7 @@ intermediate_representation ir({&ir}, {});
 
 identifier_scopes* current_scope = &ir.scopes;
 
-long long current_expression_index = 0;
+temp_expr_tree tmp_exp_tree(&ir.expressions, &current_scope);
 
 /* full_type get_identifier_type(const std::string& name) {
     auto& cur_scope = current_scope;
@@ -148,22 +161,24 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
         int cur_ind = tokens.current_index();
         // check for function calls, array accesses and lists first
         if (ir.function_calls.count(cur_ind)) {
-            operands.push(std::make_unique<expression_tree>(expression_tree(ir.function_calls[cur_ind].second, node_type::FUNCTION_CALL)));
-            while (tokens.current_index() <= ir.function_calls[cur_ind].first) {
+            operands.push(std::make_unique<expression_tree>(
+                expression_tree{ir.function_calls[cur_ind].identifier, node_type::FUNCTION_CALL, &ir.function_calls[cur_ind].args}));
+            while (tokens.current_index() <= ir.function_calls[cur_ind].end_of_array) {
                 tokens.next();
             }
         } else if (ir.array_accesses.count(cur_ind)) {
-            operands.push(std::make_unique<expression_tree>(expression_tree(ir.array_accesses[cur_ind].second, node_type::ARRAY_ACCESS)));
-            while (tokens.current_index() <= ir.array_accesses[cur_ind].first) {
+            operands.push(std::make_unique<expression_tree>(
+                expression_tree{ir.array_accesses[cur_ind].identifier, node_type::ARRAY_ACCESS, &ir.array_accesses[cur_ind].args}));
+            while (tokens.current_index() <= ir.array_accesses[cur_ind].end_of_array) {
                 tokens.next();
             }
         } else if (ir.lists.count(cur_ind)) {
-            operands.push(std::make_unique<expression_tree>(expression_tree(ir.lists[cur_ind].second, node_type::LIST)));
-            while (tokens.current_index() <= ir.lists[cur_ind].first) {
+            operands.push(std::make_unique<expression_tree>(expression_tree("", node_type::LIST, &ir.lists[cur_ind].args)));
+            while (tokens.current_index() <= ir.lists[cur_ind].end_of_array) {
                 tokens.next();
             }
         } else if (is_identifier_or_constant(cur_token)) {
-            operands.push(std::make_unique<expression_tree>(expression_tree(cur_token.value, token_type_to_node_type(cur_token.name))));
+            operands.push(std::make_unique<expression_tree>(expression_tree{token_type_to_node_type(cur_token.name), cur_token.value}));
             tokens.next();
         } else if (cur_token.name == token_type::PUNCTUATION && cur_token.value == "(") {
             operators.push({"(", cur_ind});
@@ -175,7 +190,7 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
                 operators.pop();
                 auto right = std::move(operands.top());
                 operands.pop();
-                auto parent = expression_tree(op, node_type::OPERATOR);
+                expression_tree parent = {node_type::OPERATOR, op};
                 if (op == "!" || ir.unary_operator_indexes.count(p.second)) {
                     parent.right = std::move(right);
                     operands.push(std::make_unique<expression_tree>(parent));
@@ -200,7 +215,7 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
                 operators.pop();
                 auto right = std::move(operands.top());
                 operands.pop();
-                auto parent = expression_tree(op, node_type::OPERATOR);
+                expression_tree parent = {node_type::OPERATOR, op};
                 if (op == "!" || ir.unary_operator_indexes.count(p.second)) {
                     parent.right = std::move(right);
                     operands.push(std::make_unique<expression_tree>(parent));
@@ -224,7 +239,7 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
         operators.pop();
         auto right = std::move(operands.top());
         operands.pop();
-        auto parent = expression_tree(op, node_type::OPERATOR);
+        expression_tree parent = {node_type::OPERATOR, op};
         if (op == "!" || ir.unary_operator_indexes.count(p.second)) {
             parent.right = std::move(right);
             operands.push(std::make_unique<expression_tree>(parent));
@@ -250,7 +265,8 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
 inline bool newline() { return tokens.current().name == token_type::NEWLINE; }
 
 bool program();
-inline bool expression(int iteration = 0);
+// passing "1" for add_to_ir will add it to the ir, passing "2" will add it directly (not to temp tree)
+inline bool expression(int iteration = 0, int add_to_ir = 0);
 
 inline bool identifier() {
     // syntax of identifier already checked when scanning
@@ -263,14 +279,10 @@ inline bool data_type() {
 }
 
 inline bool is_valid_int(const std::string& value) {
-    int cur_index = 0;
-    if (value[0] == '-') {
-        cur_index++;
-    }
-    if (value.length() - cur_index == 1) {
+    if (value.length() == 1) {
         return true;
     }
-    if (value[cur_index] == '0') {
+    if (value[0] == '0') {
         return false;
     }
     return true;
@@ -287,8 +299,7 @@ inline bool integer() {
 inline bool double_token() {
     if (tokens.current().name == token_type::DOUBLE) {
         // make sure it's a valid number, meaning no leading zeros
-        std::string value = tokens.current().value.substr(0, tokens.current().value.find('.'));
-        return is_valid_int(value);
+        return is_valid_int(tokens.current().value.substr(0, tokens.current().value.find('.')));
     }
     return false;
 }
@@ -297,29 +308,30 @@ inline bool string_token() { return tokens.current().name == token_type::STRING;
 
 inline bool boolean() { return tokens.current().name == token_type::BOOL; }
 
-inline std::pair<bool, std::string> list_expression() {
+inline std::pair<bool, std::vector<int>*> list_expression() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
-        std::string full_name = "[";
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
-            full_name += "]";
-            ir.lists[cur_ind] = {tokens.current_index(), full_name};
-            return {true, full_name};
+            args_list al = {tokens.current_index(), std::vector<int>{}, ""};
+            tmp_exp_tree.add_list_to_ir(cur_ind, al);
+            // ir.lists[cur_ind] = {tokens.current_index(), std::vector<int>{}, ""};
+            return {true, &ir.lists[cur_ind].args};
         }
-        if (expression()) {
-            full_name += std::to_string(ir.expressions.size() - 1);
+        if (expression(0, 1)) {
+            std::vector<int> args = {tmp_exp_tree.last_exp_index()};
             tokens.next();
             while (true) {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
-                    ir.lists[cur_ind] = {tokens.current_index(), full_name};
-                    return {true, full_name + "]"};
+                    args_list al = {tokens.current_index(), std::move(args), ""};
+                    tmp_exp_tree.add_list_to_ir(cur_ind, al);
+                    // ir.lists[cur_ind] = {tokens.current_index(), std::move(args), ""};
+                    return {true, &ir.lists[cur_ind].args};
                 }
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
-                    full_name += ",";
                     tokens.next();
-                    if (expression()) {
-                        full_name += std::to_string(ir.expressions.size() - 1);
+                    if (expression(0, 1)) {
+                        args.push_back(tmp_exp_tree.last_exp_index());
                         tokens.next();
                         continue;
                     }
@@ -331,14 +343,14 @@ inline std::pair<bool, std::string> list_expression() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
-    return {false, ""};
+    return {false, nullptr};
 }
 
 bool parenthesesed_expression() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
         tokens.next();
-        if (expression()) {
+        if (expression(0, 1)) {
             tokens.next();
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                 return true;
@@ -362,7 +374,8 @@ std::pair<bool, int> unary_expression() {
     if (tokens.current().name == token_type::ARITHMETIC_OPERATOR && (tokens.current().value == "-" || tokens.current().value == "+")) {
         tokens.next();
         if (expression()) {
-            ir.unary_operator_indexes.insert(cur_ind);
+            tmp_exp_tree.add_unary_operator_to_ir(cur_ind);
+            // ir.unary_operator_indexes.insert(cur_ind);
             return {true, cur_ind};
         }
         tokens.previous();
@@ -392,26 +405,26 @@ std::pair<bool, int> comparison_or_arithmetic_expression_or_logical_expression()
     return {false, -2};
 }
 
-bool body(bool comes_from_for_loop = false) {
+bool body(bool comes_from_for_loop_or_function = false) {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "{") {
         tokens.next();
-        // if the body is coming from the for loop, a new scope was already created before since the stuff in the parentheses belongs to that new
-        // scope
-        if (!comes_from_for_loop) {
+        // if the body is coming from the for loop or a function, a new scope was already created before since the stuff in the parentheses belongs to
+        // that new scope
+        if (!comes_from_for_loop_or_function) {
             // new scope
             current_scope = current_scope->new_scope();
         }
         if (program()) {
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "}") {
-                if (!comes_from_for_loop) {
+                if (!comes_from_for_loop_or_function) {
                     current_scope = current_scope->upper_scope();
                 }
                 return true;
             }
         }
         // make sure to go out of that faulty scope if this didn't actually result in a body and delete the created scope
-        if (!comes_from_for_loop) {
+        if (!comes_from_for_loop_or_function) {
             current_scope = current_scope->upper_scope(true);
         }
     }
@@ -423,18 +436,24 @@ bool body(bool comes_from_for_loop = false) {
 
 bool while_statement() {
     int cur_ind = tokens.current_index();
-    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
+    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
+        tmp_exp_tree.thanks_flag = true;
+    } else {
+        tmp_exp_tree.thanks_flag = false;
     }
     if (tokens.current().name == token_type::ITERATION && tokens.current().value == "while") {
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
-            if (expression()) {
+            if (expression(0, 2)) {
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
                     if (body()) {
+                        // leaving while loop, set thanks_flag to previous value
+                        tmp_exp_tree.thanks_flag = prev_was_thanks;
                         return true;
                     }
                 }
@@ -444,6 +463,10 @@ bool while_statement() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
+    // no need to check for return value since we're returning false anyway
+    tmp_exp_tree.discard_expressions();
+    // leaving while loop, set thanks_function_flag to previous value
+    tmp_exp_tree.thanks_flag = prev_was_thanks;
     return false;
 }
 
@@ -451,11 +474,7 @@ bool partial_assignment() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "=") {
         tokens.next();
-        if (expression()) {
-            tokens.next();
-            if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
-                tokens.previous();
-            }
+        if (expression(0, 1)) {
             return true;
         }
     }
@@ -470,7 +489,8 @@ bool assignment() {
         std::string identifier_name = tokens.current().value;
         tokens.next();
         if (partial_assignment()) {
-            current_scope->assignments[identifier_name].push_back((int)ir.expressions.size() - 1);
+            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index());
+            // current_scope->assignments[identifier_name].push_back(tmp_exp_tree.last_exp_index());
             return true;
         }
         tokens.previous();
@@ -479,6 +499,7 @@ bool assignment() {
 }
 
 // taking both definition and definition_and_assignment into the same function for speed improvement
+// second bool in the pair determines whether it's also an assignment
 bool definition_or_definition_and_assignment() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "def") {
@@ -489,23 +510,24 @@ bool definition_or_definition_and_assignment() {
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                 tokens.next();
                 if (data_type()) {
+                    full_type type = full_type::to_type(tokens.current().value);
                     tokens.next();
-                    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
-                        // definition
-                        current_scope->identifiers[identifier_name] = {{}, -1, false};
-                        return true;
-                    } else if (partial_assignment()) {
+                    if (partial_assignment()) {
                         // definition and assignment
-                        current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, true};
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, tmp_exp_tree.last_exp_index(), true});
+                        // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                         return true;
                     } else {
-                        // definition without please at the end
+                        tokens.previous();
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, false});
+                        // current_scope->identifiers[identifier_name] = {{}, -1, false};
                         return true;
                     }
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                current_scope->identifiers[identifier_name] = {{}, (int)ir.expressions.size() - 1, true};
+                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, tmp_exp_tree.last_exp_index(), true});
+                // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                 return true;
             }
         }
@@ -516,12 +538,25 @@ bool definition_or_definition_and_assignment() {
     return false;
 }
 
-inline bool evaluable() { return assignment() || definition_or_definition_and_assignment(); }
+inline bool evaluable() {
+    int cur_ind = tokens.current_index();
+    if ((definition_or_definition_and_assignment() || assignment()) && tmp_exp_tree.accept_expressions()) {
+        return true;
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
 
 bool for_statement() {
     int cur_ind = tokens.current_index();
-    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
+    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
+        tmp_exp_tree.thanks_flag = true;
+    } else {
+        tmp_exp_tree.thanks_flag = false;
     }
     if (tokens.current().name == token_type::ITERATION && tokens.current().value == "for") {
         tokens.next();
@@ -533,7 +568,7 @@ bool for_statement() {
             }
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                 tokens.next();
-                if (expression()) {
+                if (expression(0, 2)) {
                     tokens.next();
                 }
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
@@ -545,6 +580,8 @@ bool for_statement() {
                         tokens.next();
                         if (body(true)) {
                             current_scope = current_scope->upper_scope();
+                            // leaving for loop, set thanks_flag to previous value
+                            tmp_exp_tree.thanks_flag = prev_was_thanks;
                             return true;
                         }
                     }
@@ -557,41 +594,41 @@ bool for_statement() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
+    // no need to check for return value since we're returning false anyway
+    tmp_exp_tree.discard_expressions();
+    // leaving for loop, set thanks_function_flag to previous value
+    tmp_exp_tree.thanks_flag = prev_was_thanks;
     return false;
 }
 
-std::pair<bool, std::string> function_call() {
+std::pair<std::string, std::vector<std::vector<int>>*> function_call() {
     int cur_ind = tokens.current_index();
     if (identifier()) {
         std::string identifier_name = tokens.current().value;
-        std::string full_name = identifier_name;
         tokens.next();
         int iterations = 0;
         int success = false;
+        std::vector<std::vector<int>> calls;
         while (true) {
             iterations++;
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
-                full_name += "(";
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
-                    full_name += ")";
-                    ir.function_calls[cur_ind] = {tokens.current_index(), full_name};
-                    return {true, full_name};
-                } else if (expression()) {
-                    full_name += std::to_string(ir.expressions.size() - 1);
+                    calls.push_back({});
+                    continue;
+                } else if (expression(0, 1)) {
+                    calls.push_back({tmp_exp_tree.last_exp_index()});
                     tokens.next();
                     while (true) {
                         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
-                            full_name += ",";
                             tokens.next();
-                            if (expression()) {
-                                full_name += std::to_string(ir.expressions.size() - 1);
+                            if (expression(0, 1)) {
+                                calls.back().push_back(tmp_exp_tree.last_exp_index());
                                 tokens.next();
                                 continue;
                             }
                             break;
                         } else if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
-                            full_name += ")";
                             tokens.next();
                             success = true;
                             break;
@@ -608,8 +645,9 @@ std::pair<bool, std::string> function_call() {
                 }
             } else if (iterations > 1) {
                 tokens.previous();
-                ir.function_calls[cur_ind] = {tokens.current_index(), full_name};
-                return {true, full_name};
+                enhanced_args_list eal = {tokens.current_index(), std::move(calls), identifier_name};
+                tmp_exp_tree.add_function_calls_to_ir(cur_ind, eal);
+                return {identifier_name, &ir.function_calls[cur_ind].args};
             } else {
                 break;
             }
@@ -618,34 +656,32 @@ std::pair<bool, std::string> function_call() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
-    return {false, ""};
+    return {"", nullptr};
 }
 
-std::pair<bool, std::string> array_access() {
+std::pair<std::string, std::vector<int>*> array_access() {
     int cur_ind = tokens.current_index();
     if (identifier()) {
         std::string identifier_name = tokens.current().value;
-        std::string full_name = identifier_name;
         tokens.next();
+        std::vector<int> args;
         int iterations = 0;
         while (true) {
             iterations++;
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
-                full_name += "[";
                 tokens.next();
-                if (expression()) {
-                    full_name += std::to_string(ir.expressions.size() - 1);
+                if (expression(0, 1)) {
+                    args.push_back(tmp_exp_tree.last_exp_index());
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
-                        full_name += "]";
                         continue;
                     }
                 }
                 break;
             } else if (iterations > 1) {
                 tokens.previous();
-                ir.array_accesses[cur_ind] = {tokens.current_index(), full_name};
-                return {true, full_name};
+                ir.array_accesses[cur_ind] = {tokens.current_index(), std::move(args), identifier_name};
+                return {identifier_name, &ir.array_accesses[cur_ind].args};
             } else {
                 break;
             }
@@ -654,7 +690,7 @@ std::pair<bool, std::string> array_access() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
-    return {false, ""};
+    return {"", nullptr};
 }
 
 inline bool iteration_statement() { return while_statement() || for_statement(); }
@@ -665,7 +701,7 @@ bool if_structure() {
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
-            if (expression()) {
+            if (expression(0, 2)) {
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
@@ -695,15 +731,25 @@ bool if_structure() {
 
 bool if_statement() {
     int cur_ind = tokens.current_index();
-    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value != "please") {
+    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
+        tmp_exp_tree.thanks_flag = true;
         tokens.next();
+    } else {
+        tmp_exp_tree.thanks_flag = false;
     }
     if (if_structure()) {
+        // leaving if statement, set thanks_flag to previous value
+        tmp_exp_tree.thanks_flag = prev_was_thanks;
         return true;
     }
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
+    // no need to check for return value since we're returning false anyway
+    tmp_exp_tree.discard_expressions();
+    // leaving if statement, set thanks_flag to previous value
+    tmp_exp_tree.thanks_flag = prev_was_thanks;
     return false;
 }
 
@@ -720,16 +766,39 @@ inline bool break_statement() {
 }
 
 inline bool return_statement() {
+    int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::CONTROL && tokens.current().value == "return") {
         tokens.next();
-        if (expression()) {
+        bool has_exp;
+        if ((has_exp = expression(0, 1))) {
             tokens.next();
         }
         if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
+            if (has_exp) {
+                // expression has please, accept it
+                if (!tmp_exp_tree.accept_expressions()) {
+                    while (cur_ind < tokens.current_index()) {
+                        tokens.previous();
+                    }
+                    return false;
+                }
+            }
             return true;
+        }
+        if (has_exp) {
+            // expression has no please, discard
+            if (!tmp_exp_tree.discard_expressions()) {
+                while (cur_ind < tokens.current_index()) {
+                    tokens.previous();
+                }
+                return false;
+            }
         }
         tokens.previous();
         return true;
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
     }
     return false;
 }
@@ -750,15 +819,18 @@ inline bool jump_statement() { return break_statement() || return_statement() ||
 
 bool function_statement() {
     int cur_ind = tokens.current_index();
-    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
-        tokens.next();
-    }
+    int prev_was_thanks = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
+        tmp_exp_tree.thanks_flag = true;
+    } else {
+        tmp_exp_tree.thanks_flag = false;
     }
+
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "fun") {
         tokens.next();
         if (identifier()) {
+            std::string identifier_name = tokens.current().value;
             tokens.next();
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
                 tokens.next();
@@ -767,28 +839,55 @@ bool function_statement() {
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                         tokens.next();
                         if (data_type()) {
+                            full_type return_type = full_type::to_type(tokens.current().value);
                             tokens.next();
                             if (body()) {
-                                return true;
+                                // leaving function, set thanks_function_flag to previous value
+                                ir.function_info.push_back({return_type, {}, tmp_exp_tree.thanks_flag});
+                                tmp_exp_tree.add_identifier_to_cur_scope(
+                                    identifier_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, &ir.function_info.back()}, -1, true});
+                                if (tmp_exp_tree.accept_expressions()) {
+                                    tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                    return true;
+                                }
                             }
                         }
                     } else if (body()) {
-                        return true;
+                        // leaving function, set thanks_function_flag to previous value
+                        ir.function_info.push_back({{}, {}, tmp_exp_tree.thanks_flag});
+                        tmp_exp_tree.add_identifier_to_cur_scope(
+                            identifier_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, &ir.function_info.back()}, -1, true});
+                        if (tmp_exp_tree.accept_expressions()) {
+                            tmp_exp_tree.thanks_flag = prev_was_thanks;
+                            return true;
+                        }
                     }
                 } else if (identifier()) {
+                    current_scope = current_scope->new_scope();
+                    std::vector<std::string> params;
+                    const std::string& identifier_name = tokens.current().value;
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                         tokens.next();
                         if (data_type()) {
+                            full_type type = full_type::to_type(tokens.current().value);
+                            // since it's a parameter it's always marked as "initialized_with_definition"
+                            tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true});
+                            params.push_back(identifier_name);
                             tokens.next();
                             while (true) {
                                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                                     tokens.next();
                                     if (identifier()) {
+                                        const std::string& identifier_name = tokens.current().value;
                                         tokens.next();
                                         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                                             tokens.next();
                                             if (data_type()) {
+                                                full_type type = full_type::to_type(tokens.current().value);
+                                                // since it's a parameter it's always marked as "initialized_with_defnition"
+                                                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true});
+                                                params.push_back(identifier_name);
                                                 tokens.next();
                                                 continue;
                                             }
@@ -796,22 +895,35 @@ bool function_statement() {
                                     }
                                 } else if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                                     tokens.next();
+                                    full_type return_type = {};
                                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                                         tokens.next();
                                         if (data_type()) {
+                                            return_type = full_type::to_type(tokens.current().value);
                                             tokens.next();
                                         } else {
                                             break;
                                         }
                                     }
-                                    if (body()) {
-                                        return true;
+                                    if (body(true)) {
+                                        // leaving function, set thanks_function_flag to previous value
+                                        ir.function_info.push_back({std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag});
+                                        tmp_exp_tree.add_identifier_to_cur_scope(
+                                            identifier_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, &ir.function_info.back()}, -1, true});
+                                        if (tmp_exp_tree.accept_expressions()) {
+                                            tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                            current_scope = current_scope->upper_scope();
+                                            return true;
+                                        }
+                                        break;
                                     }
                                 }
                                 break;
                             }
                         }
                     }
+                    // make sure to go out of that faulty scope if this didn't actually result in a body and delete the created scope
+                    current_scope = current_scope->upper_scope(true);
                 }
             }
         }
@@ -819,57 +931,168 @@ bool function_statement() {
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
+    // no need to check for return value since we're returning false anyway
+    tmp_exp_tree.discard_expressions();
+    // leaving function, set thanks_function_flag to previous value
+    tmp_exp_tree.thanks_flag = prev_was_thanks;
     return false;
 }
 
 inline bool expression_statement() {
-    if (expression()) {
+    auto it = tokens.iterator_at_current_pos();
+    int cur_ind = tokens.current_index();
+    if (expression(0, 1)) {
         tokens.next();
         if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
+            // expression has no please, discard
+            if (!tmp_exp_tree.discard_expressions()) {
+                while (cur_ind < tokens.current_index()) {
+                    tokens.previous();
+                }
+                return false;
+            }
             tokens.previous();
+        } else {
+            // expression has please, accept expressions
+            if (!tmp_exp_tree.accept_expressions()) {
+                while (cur_ind < tokens.current_index()) {
+                    tokens.previous();
+                }
+                return false;
+            }
+            if (tmp_exp_tree.thanks_flag) {
+                // has thanks but still please, repeat statement
+                std::queue<token*> token_queue;
+                // only "<" and not "<=" to not repeat the "please" and have an infinite loop
+                for (int i = cur_ind; i < tokens.current_index(); i++) {
+                    token_queue.push(&(*it++));
+                }
+                tokens.insert_at(++it, {token_type::NEWLINE, "\n"});
+                while (!token_queue.empty()) {
+                    tokens.insert_at(it, *token_queue.front());
+                    token_queue.pop();
+                }
+            }
         }
         return true;
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
     }
     return false;
 }
 
-inline bool initialization_statement() { return definition_or_definition_and_assignment() || assignment(); }
+inline bool initialization_statement() {
+    auto it = tokens.iterator_at_current_pos();
+    int cur_ind = tokens.current_index();
+    if (definition_or_definition_and_assignment() || assignment()) {
+        tokens.next();
+        if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
+            // expression has no please, discard
+            if (!tmp_exp_tree.discard_expressions()) {
+                while (cur_ind < tokens.current_index()) {
+                    tokens.previous();
+                }
+                return false;
+            }
+            tokens.previous();
+        } else {
+            // expression has please, accept expressions
+            if (!tmp_exp_tree.accept_expressions()) {
+                while (cur_ind < tokens.current_index()) {
+                    tokens.previous();
+                }
+                return false;
+            }
+            if (tmp_exp_tree.thanks_flag) {
+                // has thanks but still please, repeat statement
+                std::queue<token*> token_queue;
+                // only "<" and not "<=" to not repeat the "please" and have an infinite loop
+                for (int i = cur_ind; i < tokens.current_index(); i++) {
+                    token_queue.push(&(*it++));
+                }
+                tokens.insert_at(++it, {token_type::NEWLINE, "\n"});
+                while (!token_queue.empty()) {
+                    tokens.insert_at(it, *token_queue.front());
+                    token_queue.pop();
+                }
+            }
+        }
+        return true;
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    return false;
+}
 
 inline bool statement() {
     return iteration_statement() || if_statement() || jump_statement() || function_statement() || initialization_statement() ||
            expression_statement();
 }
 
-inline bool expression(int iteration) {
-    std::pair<bool, std::string> type;
+inline bool expression(int iteration, int add_to_ir) {
+    std::pair<bool, std::vector<int>*> type;
     std::pair<bool, int> nested_exp;
+    std::pair<std::string, std::vector<std::vector<int>>*> type_for_func;
+    std::pair<std::string, std::vector<int>*> type_for_array_and_list;
     if (iteration == 0 && (nested_exp = comparison_or_arithmetic_expression_or_logical_expression()).first) {
-        ir.expressions.push_back(std::move(*construct_exp_tree(nested_exp.second)));
+        if (add_to_ir > 0) {
+            tmp_exp_tree.add_expression_to_ir(*construct_exp_tree(nested_exp.second), add_to_ir == 2);
+        }
     } else if ((nested_exp = unary_expression()).first) {
-        ir.expressions.push_back(std::move(*construct_exp_tree(nested_exp.second)));
-    } else if ((type = function_call()).first) {
-        ir.expressions.push_back({type.second, node_type::FUNCTION_CALL});
-    } else if ((type = array_access()).first) {
-        ir.expressions.push_back({type.second, node_type::ARRAY_ACCESS});
+        if (add_to_ir > 0) {
+            tmp_exp_tree.add_expression_to_ir(*construct_exp_tree(nested_exp.second), add_to_ir == 2);
+        }
+    } else if ((type_for_func = function_call()).first != "") {
+        if (add_to_ir > 0) {
+            expression_tree et = {type_for_func.first, node_type::FUNCTION_CALL, type_for_func.second};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
+    } else if ((type_for_array_and_list = array_access()).first != "") {
+        if (add_to_ir > 0) {
+            expression_tree et = {type_for_array_and_list.first, node_type::ARRAY_ACCESS, type_for_func.second};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (identifier()) {
-        ir.expressions.push_back({tokens.current().value, node_type::IDENTIFIER});
+        if (add_to_ir > 0) {
+            expression_tree et = {node_type::IDENTIFIER, tokens.current().value};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (double_token()) {
-        ir.expressions.push_back({tokens.current().value, node_type::DOUBLE});
+        if (add_to_ir > 0) {
+            expression_tree et = {node_type::DOUBLE, tokens.current().value};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (integer()) {
-        ir.expressions.push_back({tokens.current().value, node_type::INT});
+        if (add_to_ir > 0) {
+            expression_tree et = {node_type::INT, tokens.current().value};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (string_token()) {
-        ir.expressions.push_back({tokens.current().value, node_type::STRING});
+        if (add_to_ir > 0) {
+            expression_tree et = {node_type::STRING, tokens.current().value};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (boolean()) {
-        ir.expressions.push_back({tokens.current().value, node_type::BOOL});
+        if (add_to_ir > 0) {
+            expression_tree et = {node_type::BOOL, tokens.current().value};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if ((type = list_expression()).first) {
-        ir.expressions.push_back({type.second, node_type::LIST});
+        if (add_to_ir > 0) {
+            expression_tree et = {"", node_type::LIST, type.second};
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else if (parenthesesed_expression()) {
-        // copied expression_tree on purpose to not invalidate the previous expression_tree by moving its ownership
-        ir.expressions.push_back(ir.expressions.back());
+        if (add_to_ir > 0) {
+            // copied expression_tree on purpose to not invalidate the previous expression_tree by moving its ownership
+            expression_tree et = ir.expressions.back();
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        }
     } else {
         return false;
     }
-
     return true;
 }
 
@@ -886,6 +1109,8 @@ bool program() {
                 tokens.next(false);
                 if (statement()) {
                     tokens.next(false);
+                } else {
+                    break;
                 }
             } else {
                 break;
