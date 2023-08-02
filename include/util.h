@@ -1,3 +1,5 @@
+#ifndef HEADER_UTIL_H
+#define HEADER_UTIL_H
 #include "language.h"
 #include <string>
 
@@ -18,7 +20,10 @@ inline std::string& rtrim(std::string& s) {
 // trim from left & right
 inline std::string& trim(std::string& s) { return ltrim(rtrim(s)); }
 
+inline bool starts_with(const std::string& s, const std::string& check) { return s.rfind(check, 0) == 0; }
+
 struct token {
     token_type name;
     std::string value;
 };
+#endif
