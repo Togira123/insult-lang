@@ -4,10 +4,10 @@ struct temp_expr_tree {
     // keeps track of functions or iterations/control flow statements labeled with thanks
     // true if the current body is enclosed in labeled with thanks statement
     bool thanks_flag = false;
-    temp_expr_tree(std::vector<expression_tree>* ets, identifier_scopes** current_scope) : expressions(ets), cur_scope(current_scope) {}
+    temp_expr_tree(std::vector<expression_tree>& ets, identifier_scopes** current_scope) : expressions(ets), cur_scope(current_scope) {}
     void add_expression_to_ir(expression_tree& et, bool add_directly = false) {
         if (add_directly) {
-            expressions->push_back(std::move(et));
+            expressions.push_back(std::move(et));
         } else {
             tmp_exp_tree.push_back(std::move(et));
         }
@@ -54,7 +54,7 @@ struct temp_expr_tree {
         // also store the ind in case we have to delete later
         unary_op_indexes.push_back(ind);
     }
-    int last_exp_index() { return expressions->size() + tmp_exp_tree.size() - 1; }
+    int last_exp_index() { return expressions.size() + tmp_exp_tree.size() - 1; }
     bool discard_expressions() {
         if (thanks_flag) {
             // don't discard
@@ -104,7 +104,7 @@ struct temp_expr_tree {
         list_indexes.clear();
         array_access_indexes.clear();
         for (int i = 0; i < (int)tmp_exp_tree.size(); i++) {
-            expressions->push_back(std::move(tmp_exp_tree[i]));
+            expressions.push_back(std::move(tmp_exp_tree[i]));
         }
         tmp_exp_tree.clear();
         return true;
@@ -114,7 +114,7 @@ private:
     // temporarily store expressions here until it is determined whether they are part of a please expression or not
     std::vector<expression_tree> tmp_exp_tree;
     // references the expressions in the IR
-    std::vector<expression_tree>* expressions;
+    std::vector<expression_tree>& expressions;
     // pointer that points to the pointer pointing to current scope
     identifier_scopes** cur_scope;
     // stores identifiers that were defined in that scope

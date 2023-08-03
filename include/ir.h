@@ -1,4 +1,5 @@
 #include "util.h"
+#include <list>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -18,8 +19,8 @@ struct full_type {
     int dimension;
     // only applicable if type == FUNCTION
     // points to an item in  function_info vector in intermediate_representation struct
-    function_detail* function_info;
-    full_type(types t = types::UNKNOWN_TYPE, types at = types::UNKNOWN_TYPE, int d = 0, function_detail* fi = nullptr)
+    size_t function_info;
+    full_type(types t = types::UNKNOWN_TYPE, types at = types::UNKNOWN_TYPE, int d = 0, size_t fi = -1)
         : type(t), array_type(at), dimension(d), function_info(fi) {}
     // bool is_assignable_to(const full_type& other);
     static full_type to_type(const std::string& string_type) {
@@ -124,19 +125,35 @@ struct expression_tree {
     // is empty unless node_type is one of ARRAY_ACCESS or LIST
     // is a pointer because the actual vector is stored in the intermediate_representation struct
     // in either array_accesses or lists
-    std::vector<int>* args;
+    // index to refer to
+    int args_array_access_index;
+    int args_function_call_index;
+    int args_list_index;
     // is empty unless node_type is FUNCTION_CALL
     // is a pointer because the actual vector is stored in the intermediate_representation struct
     // in function_calls
     std::vector<std::vector<int>>* enhanced_args;
     // std::unique_ptr<expression_tree> parent;
-    expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, std::vector<int>* a = nullptr)
-        : node(n), type(t), left(nullptr), right(nullptr), args(a), enhanced_args(nullptr) {}
-    expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, std::vector<std::vector<int>>* ea = nullptr)
-        : node(n), type(t), left(nullptr), right(nullptr), args(nullptr), enhanced_args(ea) {}
+    expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, int ind = -1)
+        : node(n), type(t), left(nullptr), right(nullptr), enhanced_args(nullptr) {
+        switch (t) {
+        case node_type::ARRAY_ACCESS:
+            args_array_access_index = ind;
+            break;
+        case node_type::FUNCTION_CALL:
+            args_function_call_index = ind;
+            break;
+        case node_type::LIST:
+            args_list_index = ind;
+        default:
+            break;
+        }
+    }
     expression_tree(node_type t = node_type::IDENTIFIER, std::string n = "")
-        : node(n), type(t), left(nullptr), right(nullptr), args(nullptr), enhanced_args(nullptr) {}
-    expression_tree(const expression_tree& other) : node(other.node), type(other.type), args(other.args), enhanced_args(other.enhanced_args) {
+        : node(n), type(t), left(nullptr), right(nullptr), args_array_access_index(-1), args_function_call_index(-1), args_list_index(-1) {}
+    expression_tree(const expression_tree& other)
+        : node(other.node), type(other.type), args_array_access_index(other.args_array_access_index),
+          args_function_call_index(other.args_function_call_index), args_list_index(other.args_list_index) {
         if (other.left) {
             left = std::make_unique<expression_tree>(*other.left);
         }
@@ -150,6 +167,8 @@ struct expression_tree {
     }
 };
 
+// so what we need is a vector on each scope which holds the order in which stuff happens
+// so maybe a vector of just simple pairs where one is the type of thing happening next and the other is a pointer
 struct identifier_scopes {
     // the level of the scope, 0 for global scope
     int level;
@@ -179,17 +198,17 @@ struct identifier_scopes {
             if ((unsigned long)index == val.lower.size() - 1) {
                 val.lower.pop_back();
             } else {
-                val.lower.erase(val.lower.begin() + index);
+                throw std::runtime_error("can only delete last scope");
             }
         }
         return upper;
     }
-    const std::vector<identifier_scopes>& lower_scopes() { return lower; }
+    const std::list<identifier_scopes>& lower_scopes() { return lower; }
     intermediate_representation* get_ir() { return ir; }
 
 private:
     identifier_scopes* upper;
-    std::vector<identifier_scopes> lower;
+    std::list<identifier_scopes> lower;
     // index of this scope in the upper scope's "lower" vector
     int index;
     // the ir this struct is (indirectly) referenced from
@@ -210,6 +229,17 @@ struct enhanced_args_list {
     std::string identifier;
 };
 
+struct if_statement_struct {
+    // index for the expression condition stored in intermediate_representation::expressions
+    int condition = -1;
+    // the scope the program enters if the condition is true
+    identifier_scopes* body = nullptr;
+    // if there is an else if clause it will be referenced here as the next if statement
+    int else_if = -1;
+    // if there is an else clause its body will be referenced here
+    identifier_scopes* else_body = nullptr;
+};
+
 struct intermediate_representation {
     identifier_scopes scopes;
     // the key is the start of the function call in the token list
@@ -228,6 +258,8 @@ struct intermediate_representation {
     // this is so that there's no unnecessary overhead when storing normal identifiers as these would need to hold empty fields of the function_detail
     // struct. There's no need to store anything else as these will only be accessed indirectly through the full_type struct
     std::vector<function_detail> function_info;
+    // stores if statements that appear across all the source code
+    std::vector<if_statement_struct> if_statements;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, enhanced_args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},
