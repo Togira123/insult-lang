@@ -36,7 +36,7 @@ struct temp_expr_tree {
         // also store key in case we have to delete
         function_calls.push_back(ind);
     }
-    void add_array_access_to_ir(int ind, args_list& list) {
+    void add_array_access_to_ir(int ind, args_list list) {
         // add to IR as usual
         (*cur_scope)->get_ir()->array_accesses[ind] = std::move(list);
         // also store key in case we have to delete

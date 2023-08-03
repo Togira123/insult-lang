@@ -680,7 +680,7 @@ std::pair<std::string, std::vector<int>*> array_access() {
                 break;
             } else if (iterations > 1) {
                 tokens.previous();
-                ir.array_accesses[cur_ind] = {tokens.current_index(), std::move(args), identifier_name};
+                tmp_exp_tree.add_array_access_to_ir(cur_ind, {tokens.current_index(), std::move(args), identifier_name});
                 return {identifier_name, &ir.array_accesses[cur_ind].args};
             } else {
                 break;
