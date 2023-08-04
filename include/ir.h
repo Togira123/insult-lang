@@ -240,6 +240,24 @@ struct if_statement_struct {
     identifier_scopes* else_body = nullptr;
 };
 
+struct while_statement_struct {
+    // index for the expression condition stored in intermediate_representation::expressions
+    int condition = -1;
+    // the scope the program enters if the condition is true
+    identifier_scopes* body = nullptr;
+};
+
+struct for_statement_struct {
+    std::string init_statement = "";
+    bool init_statement_is_definition;
+    int condition = -1;
+    std::string after = "";
+    int after_index = -1;
+    // the scope the program enters if the condition is true
+    // also the scope in which the init_statement and after statements are located
+    identifier_scopes* body = nullptr;
+};
+
 struct intermediate_representation {
     identifier_scopes scopes;
     // the key is the start of the function call in the token list
@@ -258,8 +276,12 @@ struct intermediate_representation {
     // this is so that there's no unnecessary overhead when storing normal identifiers as these would need to hold empty fields of the function_detail
     // struct. There's no need to store anything else as these will only be accessed indirectly through the full_type struct
     std::vector<function_detail> function_info;
-    // stores if statements that appear across all the source code
+    // stores if statements that appear across all source code
     std::vector<if_statement_struct> if_statements;
+    // stores while statements that appear across all source code
+    std::vector<while_statement_struct> while_statements;
+    // stores for statements that appear across all source code
+    std::vector<for_statement_struct> for_statements;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, enhanced_args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},

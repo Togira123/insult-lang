@@ -62,7 +62,7 @@ body ::= "{", program, "}"
 
 while_statement ::= ["thanks"], "while", "(", expression, ")", body
 
-for_statement ::= ["thanks"], "for", "(", [evaluable], ";", [expression], ";", [evaluable], ")", body
+for_statement ::= ["thanks"], "for", "(", [evaluable], ";", expression, ";", [assignment], ")", body
 
 iteration_statement ::= while_statement | for_statement
 

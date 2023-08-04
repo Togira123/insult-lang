@@ -14,6 +14,7 @@ struct temp_expr_tree {
     }
     void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
+        last_identifier = identifier;
         // add it to the IR as usual
         if ((*cur_scope)->identifiers.count(identifier)) {
             // already has this identifier stored if it is not treated as comment afterwards return false
@@ -25,8 +26,10 @@ struct temp_expr_tree {
         identifier_names.push_back(identifier);
     }
     void add_assignment_to_cur_scope(std::string& identifier, int ind) {
+        last_assignment = identifier;
         // add to IR as usual
         (*cur_scope)->assignments[identifier].push_back(ind);
+        last_assignment_ind = (*cur_scope)->assignments[identifier].size() - 1;
         // store identifier name in case we need to delete later
         assignments.push_back(identifier);
     }
@@ -55,6 +58,8 @@ struct temp_expr_tree {
         unary_op_indexes.push_back(ind);
     }
     int last_exp_index() { return expressions.size() + tmp_exp_tree.size() - 1; }
+    const std::string& last_identifier_added() { return last_identifier; }
+    const std::pair<std::string&, int> last_assignment_added() { return {last_assignment, last_assignment_ind}; }
     bool discard_expressions() {
         if (thanks_flag) {
             // don't discard
@@ -133,4 +138,7 @@ private:
     // holds indexes for array accesses
     std::vector<int> array_access_indexes;
     bool expect_identifier_deletion = false;
+    std::string last_identifier = "";
+    std::string last_assignment = "";
+    size_t last_assignment_ind = -1;
 };

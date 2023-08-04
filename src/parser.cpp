@@ -449,10 +449,13 @@ bool while_statement() {
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
             if (expression(0, 2)) {
+                int condition = tmp_exp_tree.last_exp_index();
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
-                    if (body().first) {
+                    std::pair<bool, identifier_scopes*> p;
+                    if ((p = body()).first) {
+                        ir.while_statements.push_back({condition, p.second});
                         // leaving while loop, set thanks_flag to previous value
                         tmp_exp_tree.thanks_flag = prev_was_thanks;
                         return true;
@@ -498,7 +501,6 @@ bool assignment() {
 }
 
 // taking both definition and definition_and_assignment into the same function for speed improvement
-// second bool in the pair determines whether it's also an assignment
 bool definition_or_definition_and_assignment() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "def") {
@@ -537,17 +539,21 @@ bool definition_or_definition_and_assignment() {
     return false;
 }
 
-inline bool evaluable() {
+// second bool is true if evaluable was a definition, false otherwise
+inline std::pair<bool, bool> evaluable() {
     int cur_ind = tokens.current_index();
-    if ((definition_or_definition_and_assignment() || assignment()) && tmp_exp_tree.accept_expressions()) {
-        return true;
+    if (definition_or_definition_and_assignment() && tmp_exp_tree.accept_expressions()) {
+        return {true, true};
+    }
+    if (assignment() && tmp_exp_tree.accept_expressions()) {
+        return {true, false};
     }
     // no need to check for return value since we're returning false anyway
     tmp_exp_tree.discard_expressions();
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
-    return false;
+    return {false, false};
 }
 
 bool for_statement() {
@@ -564,26 +570,43 @@ bool for_statement() {
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
             current_scope = current_scope->new_scope();
-            if (evaluable()) {
+            std::pair<bool, bool> res = {false, false};
+            ir.for_statements.push_back({});
+            if ((res = evaluable()).first) {
+                if (res.second) {
+                    ir.for_statements.back() = {tmp_exp_tree.last_identifier_added(), true, -1, "", -1, current_scope};
+                } else {
+                    auto& p = tmp_exp_tree.last_assignment_added();
+                    ir.for_statements.back() = {p.first, false, -1, "", p.second, current_scope};
+                }
                 tokens.next();
             }
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                 tokens.next();
                 if (expression(0, 2)) {
+                    ir.for_statements.back().condition = tmp_exp_tree.last_exp_index();
                     tokens.next();
-                }
-                if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
-                    tokens.next();
-                    if (evaluable()) {
+                    if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                         tokens.next();
-                    }
-                    if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
-                        tokens.next();
-                        if (body(true).first) {
-                            current_scope = current_scope->upper_scope();
-                            // leaving for loop, set thanks_flag to previous value
-                            tmp_exp_tree.thanks_flag = prev_was_thanks;
-                            return true;
+                        if (assignment()) {
+                            auto& p = tmp_exp_tree.last_assignment_added();
+                            ir.for_statements.back().after = p.first;
+                            ir.for_statements.back().after_index = p.second;
+                            tokens.next();
+                        }
+                        // accept assignment
+                        if (tmp_exp_tree.accept_expressions()) {
+                            if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
+                                tokens.next();
+                                if (body(true).first) {
+                                    current_scope = current_scope->upper_scope();
+                                    // leaving for loop, set thanks_flag to previous value
+                                    tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                    return true;
+                                }
+                            }
+                        } else {
+                            tmp_exp_tree.discard_expressions();
                         }
                     }
                 }
