@@ -313,13 +313,13 @@ inline std::pair<bool, int> list_expression() {
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
-            args_list al = {tokens.current_index(), std::vector<int>{}, ""};
+            args_list al = {tokens.current_index(), std::vector<size_t>{}, ""};
             tmp_exp_tree.add_list_to_ir(cur_ind, al);
             // ir.lists[cur_ind] = {tokens.current_index(), std::vector<int>{}, ""};
             return {true, cur_ind};
         }
         if (expression(0, 1)) {
-            std::vector<int> args = {tmp_exp_tree.last_exp_index()};
+            std::vector<size_t> args = {tmp_exp_tree.last_exp_index()};
             tokens.next();
             while (true) {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
@@ -515,7 +515,7 @@ bool definition_or_definition_and_assignment() {
                     tokens.next();
                     if (partial_assignment()) {
                         // definition and assignment
-                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, tmp_exp_tree.last_exp_index(), true});
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)tmp_exp_tree.last_exp_index(), true});
                         // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                         return true;
                     } else {
@@ -527,7 +527,7 @@ bool definition_or_definition_and_assignment() {
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, tmp_exp_tree.last_exp_index(), true});
+                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)tmp_exp_tree.last_exp_index(), true});
                 // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                 return true;
             }
@@ -549,7 +549,7 @@ inline std::pair<bool, bool> evaluable() {
         return {true, false};
     }
     // no need to check for return value since we're returning false anyway
-    tmp_exp_tree.discard_expressions();
+    tmp_exp_tree.discard_expressions(true);
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
@@ -571,27 +571,27 @@ bool for_statement() {
             tokens.next();
             current_scope = current_scope->new_scope();
             std::pair<bool, bool> res = {false, false};
-            ir.for_statements.push_back({});
+            for_statement_struct fss;
             if ((res = evaluable()).first) {
                 if (res.second) {
-                    ir.for_statements.back() = {tmp_exp_tree.last_identifier_added(), true, -1, "", -1, current_scope};
+                    fss = {tmp_exp_tree.last_identifier_added(), true, -1, "", -1, current_scope};
                 } else {
                     auto& p = tmp_exp_tree.last_assignment_added();
-                    ir.for_statements.back() = {p.first, false, -1, "", p.second, current_scope};
+                    fss = {p.first, false, -1, "", (int)p.second, current_scope};
                 }
                 tokens.next();
             }
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                 tokens.next();
                 if (expression(0, 2)) {
-                    ir.for_statements.back().condition = tmp_exp_tree.last_exp_index();
+                    fss.condition = tmp_exp_tree.last_exp_index();
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                         tokens.next();
                         if (assignment()) {
                             auto& p = tmp_exp_tree.last_assignment_added();
-                            ir.for_statements.back().after = p.first;
-                            ir.for_statements.back().after_index = p.second;
+                            fss.after = p.first;
+                            fss.after_index = p.second;
                             tokens.next();
                         }
                         // accept assignment
@@ -599,6 +599,7 @@ bool for_statement() {
                             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                                 tokens.next();
                                 if (body(true).first) {
+                                    ir.for_statements.push_back(std::move(fss));
                                     current_scope = current_scope->upper_scope();
                                     // leaving for loop, set thanks_flag to previous value
                                     tmp_exp_tree.thanks_flag = prev_was_thanks;
@@ -606,7 +607,7 @@ bool for_statement() {
                                 }
                             }
                         } else {
-                            tmp_exp_tree.discard_expressions();
+                            tmp_exp_tree.discard_expressions(true);
                         }
                     }
                 }
@@ -630,13 +631,14 @@ std::pair<std::string, int> function_call() {
         tokens.next();
         int iterations = 0;
         int success = false;
-        std::vector<std::vector<int>> calls;
+        std::vector<std::vector<size_t>> calls;
         while (true) {
             iterations++;
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     calls.push_back({});
+                    tokens.next();
                     continue;
                 } else if (expression(0, 1)) {
                     calls.push_back({tmp_exp_tree.last_exp_index()});
@@ -686,7 +688,7 @@ std::pair<std::string, int> array_access() {
     if (identifier()) {
         std::string identifier_name = tokens.current().value;
         tokens.next();
-        std::vector<int> args;
+        std::vector<size_t> args;
         int iterations = 0;
         while (true) {
             iterations++;
@@ -715,9 +717,19 @@ std::pair<std::string, int> array_access() {
     return {"", -1};
 }
 
-inline bool iteration_statement() { return while_statement() || for_statement(); }
+inline bool iteration_statement() {
+    if (while_statement()) {
+        current_scope->order.push_back({ir.while_statements.size() - 1, statement_type::WHILE});
+        return true;
+    }
+    if (for_statement()) {
+        current_scope->order.push_back({ir.for_statements.size() - 1, statement_type::FOR});
+        return true;
+    }
+    return false;
+}
 
-std::pair<bool, int> if_structure() {
+std::pair<bool, size_t> if_structure() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::CONTROL && tokens.current().value == "if") {
         tokens.next();
@@ -731,7 +743,7 @@ std::pair<bool, int> if_structure() {
                     std::pair<bool, identifier_scopes*> p;
                     if ((p = body()).first) {
                         ir.if_statements.push_back({condition, p.second});
-                        int val = ir.if_statements.size() - 1;
+                        size_t val = ir.if_statements.size() - 1;
                         tokens.next();
                         if (tokens.current().name == token_type::CONTROL && tokens.current().value == "else") {
                             tokens.next();
@@ -771,7 +783,9 @@ bool if_statement() {
     } else {
         tmp_exp_tree.thanks_flag = false;
     }
-    if (if_structure().first) {
+    std::pair<bool, size_t> p;
+    if ((p = if_structure()).first) {
+        current_scope->order.push_back({p.second, statement_type::IF});
         // leaving if statement, set thanks_flag to previous value
         tmp_exp_tree.thanks_flag = prev_was_thanks;
         return true;
@@ -788,7 +802,11 @@ inline bool break_statement() {
     if (tokens.current().name == token_type::CONTROL && tokens.current().value == "break") {
         tokens.next();
         if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
+            current_scope->order.push_back({0, statement_type::BREAK});
             return true;
+        }
+        if (tmp_exp_tree.thanks_flag) {
+            current_scope->order.push_back({0, statement_type::BREAK});
         }
         tokens.previous();
         return true;
@@ -813,17 +831,34 @@ inline bool return_statement() {
                     }
                     return false;
                 }
+                ir.return_statements.push_back(tmp_exp_tree.last_exp_index());
+                current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
+                return true;
             }
+            ir.return_statements.push_back(-1);
+            current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
             return true;
         }
         if (has_exp) {
             // expression has no please, discard
-            if (!tmp_exp_tree.discard_expressions()) {
+            std::pair<bool, bool> p;
+            if (!(p = tmp_exp_tree.discard_expressions()).first) {
                 while (cur_ind < tokens.current_index()) {
                     tokens.previous();
                 }
                 return false;
             }
+            if (!p.second) {
+                // was actually accepted
+                ir.return_statements.push_back(tmp_exp_tree.last_exp_index());
+                current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
+                tokens.previous();
+                return true;
+            }
+        }
+        if (tmp_exp_tree.thanks_flag) {
+            ir.return_statements.push_back(-1);
+            current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
         }
         tokens.previous();
         return true;
@@ -838,7 +873,11 @@ inline bool continue_statement() {
     if (tokens.current().name == token_type::CONTROL && tokens.current().value == "continue") {
         tokens.next();
         if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
+            current_scope->order.push_back({0, statement_type::CONTINUE});
             return true;
+        }
+        if (tmp_exp_tree.thanks_flag) {
+            current_scope->order.push_back({0, statement_type::CONTINUE});
         }
         tokens.previous();
         return true;
@@ -851,6 +890,7 @@ inline bool jump_statement() { return break_statement() || return_statement() ||
 bool function_statement() {
     int cur_ind = tokens.current_index();
     int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    bool went_out_of_scope = false;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
         tmp_exp_tree.thanks_flag = true;
@@ -877,6 +917,7 @@ bool function_statement() {
                                 tmp_exp_tree.add_identifier_to_cur_scope(
                                     function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
                                 if (tmp_exp_tree.accept_expressions()) {
+                                    current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
                                     // leaving function, set thanks_function_flag to previous value
                                     tmp_exp_tree.thanks_flag = prev_was_thanks;
                                     return true;
@@ -888,6 +929,7 @@ bool function_statement() {
                         tmp_exp_tree.add_identifier_to_cur_scope(
                             function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
                         if (tmp_exp_tree.accept_expressions()) {
+                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
                             // leaving function, set thanks_function_flag to previous value
                             tmp_exp_tree.thanks_flag = prev_was_thanks;
                             return true;
@@ -937,13 +979,15 @@ bool function_statement() {
                                         }
                                     }
                                     if (body(true).first) {
+                                        current_scope = current_scope->upper_scope();
+                                        went_out_of_scope = true;
                                         ir.function_info.push_back({std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag});
                                         tmp_exp_tree.add_identifier_to_cur_scope(
                                             function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
                                         if (tmp_exp_tree.accept_expressions()) {
+                                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
                                             // leaving function, set thanks_function_flag to previous value
                                             tmp_exp_tree.thanks_flag = prev_was_thanks;
-                                            current_scope = current_scope->upper_scope();
                                             return true;
                                         }
                                         break;
@@ -953,8 +997,10 @@ bool function_statement() {
                             }
                         }
                     }
-                    // make sure to go out of that faulty scope if this didn't actually result in a body and delete the created scope
-                    current_scope = current_scope->upper_scope(true);
+                    if (!went_out_of_scope) {
+                        // make sure to go out of that faulty scope if this didn't actually result in a body and delete the created scope
+                        current_scope = current_scope->upper_scope(true);
+                    }
                 }
             }
         }
@@ -963,7 +1009,7 @@ bool function_statement() {
         tokens.previous();
     }
     // no need to check for return value since we're returning false anyway
-    tmp_exp_tree.discard_expressions();
+    tmp_exp_tree.discard_expressions(true);
     // leaving function, set thanks_function_flag to previous value
     tmp_exp_tree.thanks_flag = prev_was_thanks;
     return false;
@@ -976,13 +1022,18 @@ inline bool expression_statement() {
         tokens.next();
         if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
             // expression has no please, discard
-            if (!tmp_exp_tree.discard_expressions()) {
+            std::pair<bool, bool> p;
+            if (!(p = tmp_exp_tree.discard_expressions()).first) {
                 while (cur_ind < tokens.current_index()) {
                     tokens.previous();
                 }
                 return false;
             }
             tokens.previous();
+            if (!p.second) {
+                // was actually accepted
+                current_scope->order.push_back({tmp_exp_tree.last_exp_index(), statement_type::EXPRESSION});
+            }
         } else {
             // expression has please, accept expressions
             if (!tmp_exp_tree.accept_expressions()) {
@@ -991,6 +1042,7 @@ inline bool expression_statement() {
                 }
                 return false;
             }
+            current_scope->order.push_back({tmp_exp_tree.last_exp_index(), statement_type::EXPRESSION});
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement
                 std::queue<token*> token_queue;
@@ -1016,17 +1068,28 @@ inline bool expression_statement() {
 inline bool initialization_statement() {
     auto it = tokens.iterator_at_current_pos();
     int cur_ind = tokens.current_index();
-    if (definition_or_definition_and_assignment() || assignment()) {
+    bool is_assignment = false;
+    if (definition_or_definition_and_assignment() || (assignment() && (is_assignment = true))) {
         tokens.next();
         if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
             // expression has no please, discard
-            if (!tmp_exp_tree.discard_expressions()) {
+            std::pair<bool, bool> p;
+            if (!(p = tmp_exp_tree.discard_expressions()).first) {
                 while (cur_ind < tokens.current_index()) {
                     tokens.previous();
                 }
                 return false;
             }
             tokens.previous();
+            if (!p.second) {
+                // was actually accepted
+                if (is_assignment) {
+                    auto& p = tmp_exp_tree.last_assignment_added();
+                    current_scope->order.push_back({p.second, statement_type::ASSIGNMENT, p.first});
+                } else {
+                    current_scope->order.push_back({0, statement_type::INITIALIZATION, tmp_exp_tree.last_identifier_added()});
+                }
+            }
         } else {
             // expression has please, accept expressions
             if (!tmp_exp_tree.accept_expressions()) {
@@ -1034,6 +1097,12 @@ inline bool initialization_statement() {
                     tokens.previous();
                 }
                 return false;
+            }
+            if (is_assignment) {
+                auto& p = tmp_exp_tree.last_assignment_added();
+                current_scope->order.push_back({p.second, statement_type::ASSIGNMENT, p.first});
+            } else {
+                current_scope->order.push_back({0, statement_type::INITIALIZATION, tmp_exp_tree.last_identifier_added()});
             }
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement

@@ -57,13 +57,15 @@ struct temp_expr_tree {
         // also store the ind in case we have to delete later
         unary_op_indexes.push_back(ind);
     }
-    int last_exp_index() { return expressions.size() + tmp_exp_tree.size() - 1; }
+    size_t last_exp_index() { return expressions.size() + tmp_exp_tree.size() - 1; }
     const std::string& last_identifier_added() { return last_identifier; }
-    const std::pair<std::string&, int> last_assignment_added() { return {last_assignment, last_assignment_ind}; }
-    bool discard_expressions() {
-        if (thanks_flag) {
+    const std::pair<std::string&, size_t> last_assignment_added() { return {last_assignment, last_assignment_ind}; }
+    // first bool is whether the whole thing went successfully
+    // second bool is true if it was really discarded, false if it was accepted
+    std::pair<bool, bool> discard_expressions(bool force_discard = false) {
+        if (!force_discard && thanks_flag) {
             // don't discard
-            return accept_expressions();
+            return {accept_expressions(), false};
         }
         if (added_function_info) {
             (*cur_scope)->get_ir()->function_info.pop_back();
@@ -95,7 +97,7 @@ struct temp_expr_tree {
         }
         expect_identifier_deletion = false;
         tmp_exp_tree.clear();
-        return true;
+        return {true, true};
     }
     bool accept_expressions() {
         if (expect_identifier_deletion) {

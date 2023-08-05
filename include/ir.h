@@ -126,16 +126,11 @@ struct expression_tree {
     // is a pointer because the actual vector is stored in the intermediate_representation struct
     // in either array_accesses or lists
     // index to refer to
-    int args_array_access_index;
-    int args_function_call_index;
-    int args_list_index;
-    // is empty unless node_type is FUNCTION_CALL
-    // is a pointer because the actual vector is stored in the intermediate_representation struct
-    // in function_calls
-    std::vector<std::vector<int>>* enhanced_args;
+    int args_array_access_index = -1;
+    int args_function_call_index = -1;
+    int args_list_index = -1;
     // std::unique_ptr<expression_tree> parent;
-    expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, int ind = -1)
-        : node(n), type(t), left(nullptr), right(nullptr), enhanced_args(nullptr) {
+    expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, int ind = -1) : node(n), type(t), left(nullptr), right(nullptr) {
         switch (t) {
         case node_type::ARRAY_ACCESS:
             args_array_access_index = ind;
@@ -167,11 +162,18 @@ struct expression_tree {
     }
 };
 
-// so what we need is a vector on each scope which holds the order in which stuff happens
-// so maybe a vector of just simple pairs where one is the type of thing happening next and the other is a pointer
+enum class statement_type { FOR, WHILE, IF, BREAK, CONTINUE, RETURN, FUNCTION, ASSIGNMENT, INITIALIZATION, EXPRESSION };
+
+struct order_struct {
+    size_t index;
+    statement_type type;
+    std::string identifier_name = "";
+};
+
 struct identifier_scopes {
     // the level of the scope, 0 for global scope
     int level;
+    std::vector<order_struct> order;
     // the identifiers declared on that level, with the identifier name as string
     std::unordered_map<std::string, identifier_detail> identifiers;
     // all assignments happening in the current scope (excluding definitions that are assignments too)
@@ -193,18 +195,20 @@ struct identifier_scopes {
         if (level == 0) {
             throw std::runtime_error("global scope is the outermost scope");
         }
+        identifier_scopes& val = *upper;
         if (delete_current_scope) {
-            identifier_scopes& val = *upper;
-            if ((unsigned long)index == val.lower.size() - 1) {
+            if ((size_t)index == val.lower.size() - 1) {
                 val.lower.pop_back();
             } else {
                 throw std::runtime_error("can only delete last scope");
             }
         }
-        return upper;
+        return &val;
     }
-    const std::list<identifier_scopes>& lower_scopes() { return lower; }
-    intermediate_representation* get_ir() { return ir; }
+    const std::list<identifier_scopes>& get_lower() const { return lower; }
+    const identifier_scopes& get_upper() const { return *upper; }
+    const int get_index() const { return index; }
+    intermediate_representation* get_ir() const { return ir; }
 
 private:
     identifier_scopes* upper;
@@ -219,13 +223,13 @@ private:
 // the vector holds numbers that represent indexes in the intermediate_representation::expressions vector
 struct args_list {
     int end_of_array;
-    std::vector<int> args;
+    std::vector<size_t> args;
     std::string identifier;
 };
 
 struct enhanced_args_list {
     int end_of_array;
-    std::vector<std::vector<int>> args;
+    std::vector<std::vector<size_t>> args;
     std::string identifier;
 };
 
@@ -282,6 +286,9 @@ struct intermediate_representation {
     std::vector<while_statement_struct> while_statements;
     // stores for statements that appear across all source code
     std::vector<for_statement_struct> for_statements;
+    // stores return statements that appear across all source code
+    // the value represents the index of the expression involved in the return statement (or some negative value if no expression was used)
+    std::vector<int> return_statements;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, enhanced_args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},
