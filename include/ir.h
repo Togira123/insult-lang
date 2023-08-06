@@ -6,11 +6,18 @@
 
 // none is applied if no type can be found which will result in an error
 // unknown is applid if no type can directly be found but it has the potential to be inferred later
-enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, FUNCTION_TYPE, ARRAY_TYPE, UNKNOWN_TYPE, NONE_TYPE };
+// VOID_TYPE is only used to describe functions that don't return anything
+enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, VOID_TYPE, FUNCTION_TYPE, ARRAY_TYPE, UNKNOWN_TYPE, NONE_TYPE };
+
+enum class node_type { IDENTIFIER, PUNCTUATION, OPERATOR, INT, DOUBLE, BOOL, STRING, FUNCTION_CALL, ARRAY_ACCESS, LIST };
+
+enum class statement_type { FOR, WHILE, IF, BREAK, CONTINUE, RETURN, FUNCTION, ASSIGNMENT, INITIALIZATION, EXPRESSION };
 
 struct function_detail;
 
 struct intermediate_representation;
+
+struct identifier_scopes;
 
 struct full_type {
     types type;
@@ -61,6 +68,37 @@ struct full_type {
         }
         return ft;
     }
+    // only converts bool, double, int and string
+    static full_type to_type(const node_type node) {
+        switch (node) {
+        case node_type::BOOL:
+            return {types::BOOL_TYPE};
+        case node_type::DOUBLE:
+            return {types::DOUBLE_TYPE};
+        case node_type::INT:
+            return {types::INT_TYPE};
+        case node_type::STRING:
+            return {types::STRING_TYPE};
+        default:
+            throw std::runtime_error("can only convert the types BOOL, DOUBLE, INT & STRING");
+        }
+    }
+    bool is_assignable_to(const full_type& other) {
+        switch (type) {
+        case types::BOOL_TYPE:
+        case types::STRING_TYPE:
+            return type == other.type;
+        case types::DOUBLE_TYPE:
+        case types::INT_TYPE:
+            return other.type == types::DOUBLE_TYPE || other.type == types::INT_TYPE;
+        case types::ARRAY_TYPE:
+            return other.type == types::ARRAY_TYPE &&
+                   (array_type == other.array_type || (array_type == types::UNKNOWN_TYPE || other.array_type == types::UNKNOWN_TYPE)) &&
+                   (dimension == other.dimension);
+        default:
+            return false;
+        }
+    }
 };
 
 struct function_detail {
@@ -68,6 +106,7 @@ struct function_detail {
     // string is enough because the rest of info can be fetched from identifier_scopes::identifiers
     std::vector<std::string> parameter_list;
     bool defined_with_thanks_keyword;
+    identifier_scopes* body;
     /* bool is_assignable_to(const function_detail& other) {
         if (!return_type.is_assignable_to(other.return_type)) {
             return false;
@@ -84,21 +123,6 @@ struct function_detail {
     } */
 };
 
-/* bool full_type::is_assignable_to(const full_type& other) {
-    if (type == types::BOOL_TYPE || type == types::STRING_TYPE) {
-        return type == other.type;
-    } else if (type == types::DOUBLE_TYPE || type == types::INT_TYPE) {
-        return other.type == types::DOUBLE_TYPE || other.type == types::INT_TYPE;
-    } else if (type == types::FUNCTION_TYPE) {
-        return other.type == types::FUNCTION_TYPE && function_info->is_assignable_to(*other.function_info);
-    } else if (type == types::ARRAY_TYPE) {
-        return other.type == types::ARRAY_TYPE && array_type == other.array_type;
-    } else {
-        // type == UNKNOWN_TYPE || type == NONE_TYPE
-        return false;
-    }
-} */
-
 // instead of having full_type here rather have
 // an expression tree which describes this identifier's type
 struct identifier_detail {
@@ -113,9 +137,9 @@ struct identifier_detail {
     // whether this identifier is constant or not, meaning whether it keeps its initial value or changes it
     // used to optimize code afterwards
     bool is_constant = true;
+    // used to check whether this identifier was already defined when traversing the IR
+    bool already_defined = false;
 };
-
-enum class node_type { IDENTIFIER, PUNCTUATION, OPERATOR, INT, DOUBLE, BOOL, STRING, FUNCTION_CALL, ARRAY_ACCESS, LIST };
 
 struct expression_tree {
     std::string node;
@@ -162,8 +186,6 @@ struct expression_tree {
     }
 };
 
-enum class statement_type { FOR, WHILE, IF, BREAK, CONTINUE, RETURN, FUNCTION, ASSIGNMENT, INITIALIZATION, EXPRESSION };
-
 struct order_struct {
     size_t index;
     statement_type type;
@@ -207,7 +229,7 @@ struct identifier_scopes {
     }
     const std::list<identifier_scopes>& get_lower() const { return lower; }
     const identifier_scopes& get_upper() const { return *upper; }
-    const int get_index() const { return index; }
+    int get_index() const { return index; }
     intermediate_representation* get_ir() const { return ir; }
 
 private:
@@ -224,12 +246,6 @@ private:
 struct args_list {
     int end_of_array;
     std::vector<size_t> args;
-    std::string identifier;
-};
-
-struct enhanced_args_list {
-    int end_of_array;
-    std::vector<std::vector<size_t>> args;
     std::string identifier;
 };
 
@@ -260,12 +276,14 @@ struct for_statement_struct {
     // the scope the program enters if the condition is true
     // also the scope in which the init_statement and after statements are located
     identifier_scopes* body = nullptr;
+    // only important if init_statement_is_definition is false because then this represents the index in the assignments[init_statement] vector
+    size_t init_index;
 };
 
 struct intermediate_representation {
     identifier_scopes scopes;
     // the key is the start of the function call in the token list
-    std::unordered_map<int, enhanced_args_list> function_calls;
+    std::unordered_map<int, args_list> function_calls;
     // the key is the start of the array access in the token list
     std::unordered_map<int, args_list> array_accesses;
     // the key is the start of the (array) list in the token list
@@ -289,7 +307,7 @@ struct intermediate_representation {
     // stores return statements that appear across all source code
     // the value represents the index of the expression involved in the return statement (or some negative value if no expression was used)
     std::vector<int> return_statements;
-    intermediate_representation(identifier_scopes s, std::unordered_map<int, enhanced_args_list> f_calls = {},
+    intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},
                                 std::vector<function_detail> fi = {})

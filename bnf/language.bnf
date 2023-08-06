@@ -50,7 +50,7 @@ arithmetic_expression ::= expression, arithmetic_operator, expression
 
 list_expression ::= "[", "]" | "[", expression, {",", expression}, "]"
 
-function_call ::= identifier, "(" (")" | expression, {",", expression}, ")"), {"(" (")" | expression, {",", expression}, ")")}
+function_call ::= identifier, "(" ,(")" | (expression, {",", expression}, ")"))
 
 array_access ::= identifier, "[", expression, "]", {"[", expression, "]"}
 

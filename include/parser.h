@@ -33,7 +33,7 @@ struct temp_expr_tree {
         // store identifier name in case we need to delete later
         assignments.push_back(identifier);
     }
-    void add_function_calls_to_ir(int ind, enhanced_args_list& list) {
+    void add_function_calls_to_ir(int ind, args_list& list) {
         // add to IR as usual
         (*cur_scope)->get_ir()->function_calls[ind] = std::move(list);
         // also store key in case we have to delete
