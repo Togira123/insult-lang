@@ -914,10 +914,10 @@ bool function_statement() {
                             tokens.next();
                             if ((p = body()).first) {
                                 ir.function_info.push_back({return_type, {}, tmp_exp_tree.thanks_flag, p.second});
-                                tmp_exp_tree.add_identifier_to_cur_scope(
-                                    function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
+                                tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true},
+                                                                         ir.function_info.size() - 1);
                                 if (tmp_exp_tree.accept_expressions()) {
-                                    current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
+                                    current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
                                     // leaving function, set thanks_function_flag to previous value
                                     tmp_exp_tree.thanks_flag = prev_was_thanks;
                                     return true;
@@ -926,10 +926,10 @@ bool function_statement() {
                         }
                     } else if ((p = body()).first) {
                         ir.function_info.push_back({{}, {}, tmp_exp_tree.thanks_flag, p.second});
-                        tmp_exp_tree.add_identifier_to_cur_scope(
-                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
+                        tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true},
+                                                                 ir.function_info.size() - 1);
                         if (tmp_exp_tree.accept_expressions()) {
-                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
+                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
                             // leaving function, set thanks_function_flag to previous value
                             tmp_exp_tree.thanks_flag = prev_was_thanks;
                             return true;
@@ -945,7 +945,7 @@ bool function_statement() {
                         if (data_type()) {
                             full_type type = full_type::to_type(tokens.current().value);
                             // since it's a parameter it's always marked as "initialized_with_definition"
-                            tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true});
+                            tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true, true, true});
                             params.push_back(identifier_name);
                             tokens.next();
                             while (true) {
@@ -959,7 +959,7 @@ bool function_statement() {
                                             if (data_type()) {
                                                 full_type type = full_type::to_type(tokens.current().value);
                                                 // since it's a parameter it's always marked as "initialized_with_defnition"
-                                                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true});
+                                                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true, true, true});
                                                 params.push_back(identifier_name);
                                                 tokens.next();
                                                 continue;
@@ -978,15 +978,15 @@ bool function_statement() {
                                             break;
                                         }
                                     }
-                                    if (body(true).first) {
+                                    if (tmp_exp_tree.accept_expressions() && body(true).first) {
                                         ir.function_info.push_back(
                                             {std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag, current_scope});
                                         current_scope = current_scope->upper_scope();
                                         went_out_of_scope = true;
                                         tmp_exp_tree.add_identifier_to_cur_scope(
-                                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, ir.function_info.size() - 1}, -1, true});
+                                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true}, ir.function_info.size() - 1);
                                         if (tmp_exp_tree.accept_expressions()) {
-                                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION});
+                                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
                                             // leaving function, set thanks_function_flag to previous value
                                             tmp_exp_tree.thanks_flag = prev_was_thanks;
                                             return true;
@@ -1233,6 +1233,7 @@ int main(int argc, char* argv[]) {
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
             std::cout << "success!\n";
+            check_ir(ir);
             return 0;
         }
     }

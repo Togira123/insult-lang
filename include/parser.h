@@ -12,15 +12,27 @@ struct temp_expr_tree {
             tmp_exp_tree.push_back(std::move(et));
         }
     }
-    void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail) {
+    void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail, size_t function_info_ind = 0) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
         last_identifier = identifier;
+
         // add it to the IR as usual
         if ((*cur_scope)->identifiers.count(identifier)) {
-            // already has this identifier stored if it is not treated as comment afterwards return false
-            expect_identifier_deletion = true;
+            if ((*cur_scope)->identifiers[identifier].type.type == types::FUNCTION_TYPE && added_function_info) {
+                // function overload is okay
+                (*cur_scope)->identifiers[identifier].type.function_info.push_back(function_info_ind);
+                added_overload = identifier;
+            } else {
+                // already has this identifier stored if it is not treated as comment afterwards return false
+                expect_identifier_deletion = true;
+            }
         } else {
             (*cur_scope)->identifiers[identifier] = std::move(detail);
+            if ((*cur_scope)->identifiers[identifier].type.type == types::FUNCTION_TYPE && added_function_info) {
+                // function overload is okay
+                (*cur_scope)->identifiers[identifier].type.function_info.push_back(function_info_ind);
+                added_overload = identifier;
+            }
         }
         // but also store the identifier, in case we have to delete it afterwards due to it being part of a non-please statement
         identifier_names.push_back(identifier);
@@ -71,6 +83,10 @@ struct temp_expr_tree {
             (*cur_scope)->get_ir()->function_info.pop_back();
             added_function_info = false;
         }
+        if (added_overload != "") {
+            (*cur_scope)->identifiers[added_overload].type.function_info.pop_back();
+            added_overload = "";
+        }
         for (int i = identifier_names.size() - 1; i >= 0; i--) {
             (*cur_scope)->identifiers.erase(identifier_names[i]);
             identifier_names.pop_back();
@@ -104,6 +120,7 @@ struct temp_expr_tree {
             return false;
         }
         added_function_info = false;
+        added_overload = "";
         identifier_names.clear();
         assignments.clear();
         function_calls.clear();
@@ -130,6 +147,7 @@ private:
     std::vector<std::string> assignments = {};
     // whether a function was defined
     bool added_function_info = false;
+    std::string added_overload = "";
     // holds function calls in case they have to be deleted again
     // the int is the key in the intermediate_representation::function_calls map
     std::vector<int> function_calls;

@@ -1,4 +1,8 @@
 #include "../include/ir.h"
+#include "../include/lib/library.h"
+#include <unordered_set>
+
+bool function_returns_in_all_paths(identifier_scopes* cur_scope);
 
 void check_statement(identifier_scopes* cur, size_t order_index);
 
@@ -10,6 +14,8 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access);
 
 full_type validate_list(identifier_scopes* cur_scope, int list_index);
 
+void handle_assignment(identifier_scopes* scope, std::string& name, int index);
+
 // makes sure that the type of identifier is set
 identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::string& name) {
     while (true) {
@@ -18,6 +24,9 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
             if (cur_scope->identifiers[name].type.type != types::FUNCTION_TYPE && !cur_scope->identifiers[name].already_defined) {
                 throw std::runtime_error("cannot access " + name + " before it is defined");
             }
+            if (cur_scope->identifiers[name].type.type == types::FUNCTION_TYPE && cur_scope->level != 0) {
+                throw std::runtime_error("functions must be defined in global scope");
+            }
             if (cur_scope->identifiers[name].type.type == types::UNKNOWN_TYPE) {
                 cur_scope->identifiers[name].type =
                     evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[cur_scope->identifiers[name].initializing_expression]);
@@ -25,7 +34,9 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
             return cur_scope->identifiers[name];
         } else if (cur_scope->level == 0) {
             // no definition found searching all the way up to global scope
-            throw std::runtime_error("no definition found for " + name);
+            static auto& ir = *cur_scope->get_ir();
+            // check if it's a std library name
+            return identifier_detail_of(ir, name);
         } else {
             cur_scope = cur_scope->upper_scope();
         }
@@ -103,31 +114,48 @@ full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& roo
 }
 
 full_type validate_function_call(identifier_scopes* cur_scope, int function_call) {
-    auto& call = cur_scope->get_ir()->function_calls[function_call];
+    static auto& ir = *cur_scope->get_ir();
+    auto& call = ir.function_calls[function_call];
     // get function definition
     std::string& name = call.identifier;
     auto& id = get_identifier_definition(cur_scope, name);
     if (id.type.type != types::FUNCTION_TYPE) {
         throw std::runtime_error(name + " is not a function");
     }
-    size_t function_info_ind = id.type.function_info;
-    function_detail& fd = cur_scope->get_ir()->function_info[function_info_ind];
-    if (fd.parameter_list.size() < call.args.size()) {
-        throw std::runtime_error("too many arguments");
-    } else if (fd.parameter_list.size() > call.args.size()) {
-        throw std::runtime_error("too few arguments");
+    auto& overloads = id.type.function_info;
+    for (auto& overload : overloads) {
+        function_detail& fd = ir.function_info[overload];
+        if (fd.parameter_list.size() == call.args.size()) {
+            // potential match
+            bool matched = true;
+            for (size_t i = 0; i < call.args.size(); i++) {
+                full_type t = evaluate_expression(cur_scope, ir.expressions[call.args[i]]);
+                auto& id = fd.body->identifiers[fd.parameter_list[i]];
+                if (!t.is_assignable_to(id.type)) {
+                    matched = false;
+                    break;
+                }
+            }
+            if (!matched) {
+                continue;
+            }
+            // finally return type
+            // if return type is unknown have to check whole function and go through it following order vector
+            // then mark as checked to not double check later on
+            if (fd.return_type.type == types::UNKNOWN_TYPE) {
+                // this also sets the return type of the function
+                for (size_t order_index = 0; order_index < fd.body->order.size(); order_index++) {
+                    check_statement(fd.body, order_index);
+                }
+                if (fd.return_type.type == types::UNKNOWN_TYPE) {
+                    fd.return_type = {types::VOID_TYPE};
+                }
+                return fd.return_type;
+            }
+            return fd.return_type;
+        }
     }
-    // check if expressions match
-
-    // finally return type
-    // if return type is unknown have to check whole function and go through it following order vector
-    // then mark as checked to not double check later on
-    if (fd.return_type.type == types::UNKNOWN_TYPE) {
-        // this also sets the return type of the function
-        check_statement(fd.body, 0);
-        return fd.return_type;
-    }
-    return fd.return_type;
+    throw std::runtime_error("no matching overload found");
 }
 
 full_type validate_array_access(identifier_scopes* cur_scope, int array_access) {
@@ -199,7 +227,9 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id) {
     }
     if (id.type.type == types::UNKNOWN_TYPE) {
         id.type = evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[id.initializing_expression]);
-        return;
+        if (id.type.type == types::VOID_TYPE || id.type.type == types::FUNCTION_TYPE) {
+            throw std::runtime_error("expression not assignable to identifier");
+        }
     }
     if (!id.type.is_assignable_to(evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[id.initializing_expression]))) {
         throw std::runtime_error("expression not assignable to identifier");
@@ -208,18 +238,14 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id) {
 
 void handle_for_statement(for_statement_struct& for_statement) {
     auto* const scope = for_statement.body;
-    auto& ir = *scope->get_ir();
+    static auto& ir = *scope->get_ir();
     if (for_statement.init_statement != "") {
         // check whether definition/assignment is okay
         if (for_statement.init_statement_is_definition) {
             auto& id = scope->identifiers[for_statement.init_statement];
             validate_definition(scope, id);
         } else {
-            auto& id = get_identifier_definition(scope, for_statement.init_statement);
-            int ind = scope->assignments[for_statement.init_statement][for_statement.init_index];
-            if (!id.type.is_assignable_to(evaluate_expression(scope, ir.expressions[ind]))) {
-                throw std::runtime_error("expression is not assignable to identifier");
-            }
+            handle_assignment(scope, for_statement.init_statement, for_statement.init_index);
         }
     }
     // make sure condition is a bool value
@@ -241,19 +267,202 @@ void handle_for_statement(for_statement_struct& for_statement) {
     }
 }
 
-void handle_while_statement(while_statement_struct& while_statement) {}
+void handle_while_statement(while_statement_struct& while_statement) {
+    auto* const scope = while_statement.body;
+    static auto& ir = *scope->get_ir();
+    // make sure condition is a bool value
+    if (!evaluate_expression(&scope->get_upper(), ir.expressions[while_statement.condition]).is_assignable_to({types::BOOL_TYPE})) {
+        throw std::runtime_error("condition must be a bool value");
+    }
+    // check body
+    for (size_t order_index = 0; order_index < scope->order.size(); order_index++) {
+        check_statement(scope, order_index);
+    }
+}
+
+void handle_if_statement(if_statement_struct& if_statement) {
+    auto* const scope = if_statement.body;
+    static auto& ir = *scope->get_ir();
+    // make sure condition is a bool value
+    if (!evaluate_expression(&scope->get_upper(), ir.expressions[if_statement.condition]).is_assignable_to({types::BOOL_TYPE})) {
+        throw std::runtime_error("condition must be a bool value");
+    }
+    // check body
+    for (size_t order_index = 0; order_index < scope->order.size(); order_index++) {
+        check_statement(scope, order_index);
+    }
+    if (if_statement.else_if >= 0) {
+        handle_if_statement(ir.if_statements[if_statement.else_if]);
+    } else if (if_statement.else_body != nullptr) {
+        for (size_t order_index = 0; order_index < if_statement.else_body->order.size(); order_index++) {
+            check_statement(if_statement.else_body, order_index);
+        }
+    }
+}
+
+void handle_return_statement(function_detail& fd, size_t return_statement_index) {
+    auto* const scope = fd.body;
+    static auto& ir = *scope->get_ir();
+    if (fd.return_type.type == types::UNKNOWN_TYPE) {
+        // type is not set yet, set it
+        if (ir.return_statements[return_statement_index] < 0) {
+            fd.return_type = {types::VOID_TYPE};
+        } else {
+            fd.return_type = evaluate_expression(scope, ir.expressions[ir.return_statements[return_statement_index]]);
+        }
+    } else {
+        // make sure return statement returns type that is assignable to function return value
+        if (ir.return_statements[return_statement_index] < 0) {
+            if (fd.return_type.type != types::VOID_TYPE) {
+                throw std::runtime_error("function return type must match with returned type");
+            }
+        } else {
+            if (!fd.return_type.is_assignable_to(evaluate_expression(scope, ir.expressions[ir.return_statements[return_statement_index]]))) {
+                throw std::runtime_error("function return type must match with returned type");
+            }
+        }
+    }
+}
+
+bool check_if_statement_for_returns(if_statement_struct& if_statement) {
+    auto* const scope = if_statement.body;
+    static auto& ir = *scope->get_ir();
+    // check body
+    bool res = function_returns_in_all_paths(if_statement.body);
+    if (if_statement.else_if >= 0) {
+        return res && check_if_statement_for_returns(ir.if_statements[if_statement.else_if]);
+    } else if (if_statement.else_body != nullptr) {
+        return res && function_returns_in_all_paths(if_statement.else_body);
+    }
+    return res;
+}
+
+bool function_returns_in_all_paths(identifier_scopes* cur_scope) {
+    static intermediate_representation& ir = *cur_scope->get_ir();
+    for (size_t order_index = 0; order_index < cur_scope->order.size(); order_index++) {
+        const auto& cur_statement = cur_scope->order[order_index];
+        switch (cur_statement.type) {
+        case statement_type::IF:
+            if (check_if_statement_for_returns(ir.if_statements[cur_statement.index])) {
+                // all possible if statements return so there's no point in looking further
+                return true;
+            }
+        case statement_type::RETURN:
+            return true;
+        default:
+            continue;
+        }
+    }
+    return false;
+}
+
+void handle_function(function_detail& fd, std::string& function_name) {
+    static std::unordered_set<std::string> checked_functions;
+    static auto& ir = *fd.body->get_ir();
+    if (fd.body->level != 1) {
+        throw std::runtime_error("functions must be defined in global scope");
+    }
+    for (size_t order_index = 0; order_index < fd.body->order.size(); order_index++) {
+        check_statement(fd.body, order_index);
+    }
+    if (fd.return_type.type == types::UNKNOWN_TYPE) {
+        fd.return_type = {types::VOID_TYPE};
+    }
+    if (fd.return_type.type != types::VOID_TYPE && !function_returns_in_all_paths(fd.body)) {
+        throw std::runtime_error("function must return a value in all control paths");
+    }
+    if (!checked_functions.count(function_name)) {
+        // make sure all overloads are unique
+        std::unordered_set<std::string> set;
+        for (const size_t& fi : ir.scopes.identifiers[function_name].type.function_info) {
+            std::string res = "";
+            for (const std::string& s : ir.function_info[fi].parameter_list) {
+                types t = ir.function_info[fi].body->identifiers[s].type.type;
+                if (t == types::ARRAY_TYPE) {
+                    res += "a" + std::to_string(ir.function_info[fi].body->identifiers[s].type.dimension);
+                    t = ir.function_info[fi].body->identifiers[s].type.array_type;
+                }
+                switch (t) {
+                case types::BOOL_TYPE:
+                    res += "b";
+                    break;
+                case types::DOUBLE_TYPE:
+                    res += "d";
+                    break;
+                case types::INT_TYPE:
+                    res += "i";
+                    break;
+                case types::STRING_TYPE:
+                    res += "s";
+                    break;
+                default:
+                    throw std::runtime_error("invalid type");
+                }
+            }
+            if (set.count(res)) {
+                throw std::runtime_error("overload must differ in parameters");
+            }
+            set.insert(res);
+        }
+    }
+    checked_functions.insert(function_name);
+}
+
+void handle_assignment(identifier_scopes* scope, std::string& name, int index) {
+    auto& id = get_identifier_definition(scope, name);
+    static intermediate_representation& ir = *scope->get_ir();
+    int ind = scope->assignments[name][index];
+    if (!id.type.is_assignable_to(evaluate_expression(scope, ir.expressions[ind]))) {
+        throw std::runtime_error("expression is not assignable to identifier");
+    }
+}
 
 void check_statement(identifier_scopes* cur, size_t order_index) {
-    intermediate_representation& ir = *cur->get_ir();
-    const auto& cur_statement = cur->order[order_index];
+    static int last_func_index = -1;
+    static int in_loop = 0;
+    static intermediate_representation& ir = *cur->get_ir();
+    auto& cur_statement = cur->order[order_index];
     switch (cur_statement.type) {
     case statement_type::FOR:
+        in_loop++;
         handle_for_statement(ir.for_statements[cur_statement.index]);
+        in_loop--;
+        break;
     case statement_type::WHILE:
+        in_loop++;
         handle_while_statement(ir.while_statements[cur_statement.index]);
-    // for statement_type::RETURN it has to check whether it is in a function and if yes if the types match (or determine the function's type
-    // if UNKNOWN)
-    default:
+        in_loop--;
+        break;
+    case statement_type::IF:
+        handle_if_statement(ir.if_statements[cur_statement.index]);
+        break;
+    case statement_type::BREAK:
+    case statement_type::CONTINUE:
+        if (in_loop == 0) {
+            throw std::runtime_error("can only break/continue inside loop");
+        }
+        break;
+    case statement_type::RETURN:
+        if (last_func_index == -1) {
+            throw std::runtime_error("can only return inside function body");
+        }
+        handle_return_statement(ir.function_info[last_func_index], cur_statement.index);
+        break;
+    case statement_type::FUNCTION: {
+        int prev_value = last_func_index;
+        last_func_index = cur_statement.index;
+        handle_function(ir.function_info[cur_statement.index], cur_statement.identifier_name);
+        last_func_index = prev_value;
+        break;
+    }
+    case statement_type::ASSIGNMENT:
+        handle_assignment(cur, cur_statement.identifier_name, cur_statement.index);
+        break;
+    case statement_type::INITIALIZATION:
+        validate_definition(cur, cur->identifiers[cur_statement.identifier_name]);
+        break;
+    case statement_type::EXPRESSION:
+        evaluate_expression(cur, ir.expressions[cur_statement.index]);
         break;
     }
 }

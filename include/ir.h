@@ -26,8 +26,8 @@ struct full_type {
     int dimension;
     // only applicable if type == FUNCTION
     // points to an item in  function_info vector in intermediate_representation struct
-    size_t function_info;
-    full_type(types t = types::UNKNOWN_TYPE, types at = types::UNKNOWN_TYPE, int d = 0, size_t fi = -1)
+    std::vector<size_t> function_info;
+    full_type(types t = types::UNKNOWN_TYPE, types at = types::UNKNOWN_TYPE, int d = 0, std::vector<size_t> fi = {})
         : type(t), array_type(at), dimension(d), function_info(fi) {}
     // bool is_assignable_to(const full_type& other);
     static full_type to_type(const std::string& string_type) {
@@ -52,7 +52,7 @@ struct full_type {
         if (is_array) {
             ft.type = types::ARRAY_TYPE;
             ft.array_type = type;
-            int i = (int)string_type.size();
+            int i = (int)string_type.size() - 1;
             for (; i >= 1; i--) {
                 if (string_type[i] == ']') {
                     if (string_type[--i] != '[') {
@@ -87,6 +87,7 @@ struct full_type {
         switch (type) {
         case types::BOOL_TYPE:
         case types::STRING_TYPE:
+        case types::VOID_TYPE:
             return type == other.type;
         case types::DOUBLE_TYPE:
         case types::INT_TYPE:
@@ -228,7 +229,7 @@ struct identifier_scopes {
         return &val;
     }
     const std::list<identifier_scopes>& get_lower() const { return lower; }
-    const identifier_scopes& get_upper() const { return *upper; }
+    identifier_scopes& get_upper() const { return *upper; }
     int get_index() const { return index; }
     intermediate_representation* get_ir() const { return ir; }
 
@@ -314,3 +315,5 @@ struct intermediate_representation {
         : scopes(s), function_calls(f_calls), array_accesses(a_accesses), lists(initial_lists), unary_operator_indexes(unary_op_indexes),
           expressions(exp), function_info(fi){};
 };
+
+void check_ir(intermediate_representation& ir);

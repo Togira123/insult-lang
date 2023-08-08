@@ -1,10 +1,17 @@
 def i = -2 please
-def j = -3 + 4 * 2 - true || false please
+def j = -3 + 4 * 2 - 4^5 please
 def k = i + j please
 def l: int please
-thanks fun f(a: string, b: double): int {
+thanks fun f(a: int, b: double): int {
     return a + -b
 }
+
+thanks fun f(c:string) {
+
+}
+
+thanks fun f() {}
+
 thanks for (def a = 0; a < 10; a = a +1 ) {
     print(a)
 }
@@ -19,13 +26,26 @@ while(i <= 10) {
     ] please
 }
 
+def a = false please
+
+def bc = !a please
+
 if (a) {
-    def abc: string please
-    abc = "this is a cool string" please
-} else if (abc == "some other string") {
+    if (bc) {
+        while (!true && false) {
+            f() please
+            def a = 3
+        }
+        def cba = 2 please
+    } else {
+        def asdlkj = i please
+    }
+    def abc: string
+    abc = "this is a cool string"
+} else if (sdkafdlsaj == "some other string") {
     def boo: bool = !true please
 } else {
     def some_char = "c" please
-    def some_double = 18.4321
-    def some_int = f(some_char, some_double, 2- 3) please
+    def some_double = 18.4321 please
+    def some_int = f(i, some_double) please
 }
