@@ -47,5 +47,5 @@ if (a) {
 } else {
     def some_char = "c" please
     def some_double = 18.4321 please
-    def some_int = f(i, some_double) please
+    def some_int = f(ref(i), some_double) please
 }
