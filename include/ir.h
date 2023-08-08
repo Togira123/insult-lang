@@ -1,4 +1,5 @@
 #include "util.h"
+#include <deque>
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -95,7 +96,7 @@ struct full_type {
         case types::ARRAY_TYPE:
             return other.type == types::ARRAY_TYPE &&
                    (array_type == other.array_type || (array_type == types::UNKNOWN_TYPE || other.array_type == types::UNKNOWN_TYPE)) &&
-                   (dimension == other.dimension);
+                   (dimension == other.dimension || dimension == -1 || other.dimension == -1);
         default:
             return false;
         }
@@ -298,7 +299,7 @@ struct intermediate_representation {
     // holds function info for function declarations
     // this is so that there's no unnecessary overhead when storing normal identifiers as these would need to hold empty fields of the function_detail
     // struct. There's no need to store anything else as these will only be accessed indirectly through the full_type struct
-    std::vector<function_detail> function_info;
+    std::deque<function_detail> function_info;
     // stores if statements that appear across all source code
     std::vector<if_statement_struct> if_statements;
     // stores while statements that appear across all source code
@@ -311,7 +312,7 @@ struct intermediate_representation {
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},
-                                std::vector<function_detail> fi = {})
+                                std::deque<function_detail> fi = {})
         : scopes(s), function_calls(f_calls), array_accesses(a_accesses), lists(initial_lists), unary_operator_indexes(unary_op_indexes),
           expressions(exp), function_info(fi){};
 };
