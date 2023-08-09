@@ -114,6 +114,7 @@ full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& roo
 }
 
 full_type validate_function_call(identifier_scopes* cur_scope, int function_call) {
+    static std::unordered_set<identifier_scopes*> function_calls_set;
     static auto& ir = *cur_scope->get_ir();
     auto& call = ir.function_calls[function_call];
     // get function definition
@@ -139,6 +140,10 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
             if (!matched) {
                 continue;
             }
+            if (function_calls_set.count(fd.body)) {
+                throw std::runtime_error("(indirect) recursion requires explicitly stated return type");
+            }
+            function_calls_set.insert(fd.body);
             // finally return type
             // if return type is unknown have to check whole function and go through it following order vector
             // then mark as checked to not double check later on
@@ -150,8 +155,10 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
                 if (fd.return_type.type == types::UNKNOWN_TYPE) {
                     fd.return_type = {types::VOID_TYPE};
                 }
+                function_calls_set.erase(fd.body);
                 return fd.return_type;
             }
+            function_calls_set.erase(fd.body);
             return fd.return_type;
         }
     }

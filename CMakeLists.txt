@@ -19,3 +19,4 @@ file(GLOB all_srcs
 )
 add_executable(a.out ${all_srcs})
 add_test(NAME parser_test COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/input1.txt)
+add_test(NAME fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fibonacci.inslt)

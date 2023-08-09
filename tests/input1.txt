@@ -7,7 +7,7 @@ thanks fun f(a: int, b: double): int {
 }
 
 thanks fun f(c:string) {
-
+    return false
 }
 
 thanks fun f() {}
@@ -36,6 +36,7 @@ if (a) {
             f() please
             def a = 3
         }
+        bc && f("some test lol") please
         def cba = 2 please
     } else {
         def asdlkj = i please
