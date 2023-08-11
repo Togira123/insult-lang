@@ -54,6 +54,41 @@ void rollback(int& index, int& fence) {
     }
 }
 
+std::string comment(std::vector<char>& buffer, int& index, int& fence) {
+    if (cur_char(buffer, index) != '/') {
+        return "";
+    }
+    if (next_char(buffer, index, fence) == '/') {
+        std::string result = "//";
+        char c = next_char(buffer, index, fence);
+        while (c != '\n' && c != EOF) {
+            result += c;
+            c = next_char(buffer, index, fence);
+        }
+        rollback(index, fence);
+        return result;
+    } else if (cur_char(buffer, index) == '*') {
+        std::string result = "/*";
+        char c = next_char(buffer, index, fence);
+        while (c != EOF) {
+            result += c;
+            if (c == '*') {
+                if ((c = next_char(buffer, index, fence)) == '/') {
+                    return result + '/';
+                }
+            } else {
+                c = next_char(buffer, index, fence);
+            }
+        }
+        rollback(index, fence);
+        // it's only a comment if it really ends with "*/"
+        return "";
+    } else {
+        rollback(index, fence);
+        return "";
+    }
+}
+
 std::string whitespace(std::vector<char>& buffer, int& index, int& fence) {
     if (cur_char(buffer, index) != ' ' && cur_char(buffer, index) != '\t') {
         return "";
@@ -70,20 +105,24 @@ std::string whitespace(std::vector<char>& buffer, int& index, int& fence) {
 }
 
 std::string newline(std::vector<char>& buffer, int& index, int& fence, int& line) {
-    if (cur_char(buffer, index) != '\n') {
+    if (cur_char(buffer, index) != '\n' && comment(buffer, index, fence) == "" && whitespace(buffer, index, fence) == "") {
         return "";
     }
     std::string result = "";
     result += cur_char(buffer, index);
+    bool contains_one_newline = result == "\n";
     line++;
     char c = next_char(buffer, index, fence);
-    while (c == '\n') {
+    while (c == '\n' || comment(buffer, index, fence) != "" || whitespace(buffer, index, fence) != "") {
+        if (!contains_one_newline && c == '\n') {
+            contains_one_newline = true;
+        }
         line++;
         result += c;
         c = next_char(buffer, index, fence);
     }
     rollback(index, fence);
-    return result;
+    return contains_one_newline ? result : "";
 }
 
 std::string integer(std::vector<char>& buffer, int& index, int& fence) {
@@ -336,41 +375,6 @@ std::string punctuation(std::vector<char>& buffer, int& index) {
     case ']':
         return std::string(1, cur_char(buffer, index));
     default:
-        return "";
-    }
-}
-
-std::string comment(std::vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) != '/') {
-        return "";
-    }
-    if (next_char(buffer, index, fence) == '/') {
-        std::string result = "//";
-        char c = next_char(buffer, index, fence);
-        while (c != '\n' && c != EOF) {
-            result += c;
-            c = next_char(buffer, index, fence);
-        }
-        rollback(index, fence);
-        return result;
-    } else if (cur_char(buffer, index) == '*') {
-        std::string result = "/*";
-        char c = next_char(buffer, index, fence);
-        while (c != EOF) {
-            result += c;
-            if (c == '*') {
-                if ((c = next_char(buffer, index, fence)) == '/') {
-                    return result + '/';
-                }
-            } else {
-                c = next_char(buffer, index, fence);
-            }
-        }
-        rollback(index, fence);
-        // it's only a comment if it really ends with "*/"
-        return "";
-    } else {
-        rollback(index, fence);
         return "";
     }
 }
