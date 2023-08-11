@@ -11,6 +11,8 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
                 cur_scope->identifiers["message"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["message"].parameter_index = 0;
+                cur_scope->identifiers["message"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
                 ir.function_info.push_back({{types::VOID_TYPE}, {"message"}, true, cur_scope});
             }
@@ -39,6 +41,8 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
                 cur_scope->identifiers["container"] = {ts[i], -1, true, true, true};
+                cur_scope->identifiers["container"].parameter_index = 0;
+                cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
                 ir.function_info.push_back({{types::INT_TYPE}, {"container"}, true, cur_scope});
             }
@@ -56,6 +60,8 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             auto* cur_scope = ir.scopes.new_scope();
             cur_scope->identifiers["container"] = {{types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, -1, true, true, true};
+            cur_scope->identifiers["container"].parameter_index = 0;
+            cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
             fi[0] = ir.function_info.size();
             ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, {"container"}, true, cur_scope});
             has_been_added_to_ir = true;
@@ -71,6 +77,8 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
                 cur_scope->identifiers["container"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["container"].parameter_index = 0;
+                cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
                 ir.function_info.push_back({{ts[i]}, {"container"}, true, cur_scope});
             }

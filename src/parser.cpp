@@ -1,4 +1,6 @@
 #include "../include/parser.h"
+#include "../include/generate_code.h"
+#include "../include/optimize.h"
 #include "../include/scanner.h"
 #include <fstream>
 #include <iostream>
@@ -697,6 +699,7 @@ std::pair<std::string, int> array_access() {
                     args.push_back(tmp_exp_tree.last_exp_index());
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
+                        tokens.next();
                         continue;
                     }
                 }
@@ -704,7 +707,11 @@ std::pair<std::string, int> array_access() {
             } else if (iterations > 1) {
                 tokens.previous();
                 tmp_exp_tree.add_array_access_to_ir(cur_ind, {tokens.current_index(), std::move(args), identifier_name});
-                return {identifier_name, cur_ind};
+                if (tmp_exp_tree.accept_expressions()) {
+                    return {identifier_name, cur_ind};
+                } else {
+                    break;
+                }
             } else {
                 break;
             }
@@ -939,13 +946,16 @@ bool function_statement() {
                     current_scope = current_scope->new_scope();
                     std::vector<std::string> params;
                     const std::string& identifier_name = tokens.current().value;
+                    ir.function_info.push_back({});
+                    const size_t function_info_ind = ir.function_info.size() - 1;
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ":") {
                         tokens.next();
                         if (data_type()) {
                             full_type type = full_type::to_type(tokens.current().value);
                             // since it's a parameter it's always marked as "initialized_with_definition"
-                            tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true, true, true});
+                            tmp_exp_tree.add_identifier_to_cur_scope(identifier_name,
+                                                                     {type, -1, true, true, true, (int)params.size(), (int)function_info_ind});
                             params.push_back(identifier_name);
                             tokens.next();
                             while (true) {
@@ -959,7 +969,8 @@ bool function_statement() {
                                             if (data_type()) {
                                                 full_type type = full_type::to_type(tokens.current().value);
                                                 // since it's a parameter it's always marked as "initialized_with_defnition"
-                                                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, true, true, true});
+                                                tmp_exp_tree.add_identifier_to_cur_scope(
+                                                    identifier_name, {type, -1, true, true, true, (int)params.size(), (int)function_info_ind});
                                                 params.push_back(identifier_name);
                                                 tokens.next();
                                                 continue;
@@ -979,14 +990,14 @@ bool function_statement() {
                                         }
                                     }
                                     if (tmp_exp_tree.accept_expressions() && body(true).first) {
-                                        ir.function_info.push_back(
-                                            {std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag, current_scope});
+                                        ir.function_info[function_info_ind] = {std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag,
+                                                                               current_scope};
                                         current_scope = current_scope->upper_scope();
                                         went_out_of_scope = true;
                                         tmp_exp_tree.add_identifier_to_cur_scope(
-                                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true}, ir.function_info.size() - 1);
+                                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true}, function_info_ind);
                                         if (tmp_exp_tree.accept_expressions()) {
-                                            current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
+                                            current_scope->order.push_back({function_info_ind, statement_type::FUNCTION, function_name});
                                             // leaving function, set thanks_function_flag to previous value
                                             tmp_exp_tree.thanks_flag = prev_was_thanks;
                                             return true;
@@ -1234,6 +1245,9 @@ int main(int argc, char* argv[]) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
             std::cout << "success!\n";
             check_ir(ir);
+            optimize(ir);
+            // check_ir(ir);
+            std::cout << generate_code(ir);
             return 0;
         }
     }

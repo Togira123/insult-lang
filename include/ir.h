@@ -1,3 +1,5 @@
+#ifndef HEADER_IR_H
+#define HEADER_IR_H
 #include "util.h"
 #include <deque>
 #include <list>
@@ -141,6 +143,18 @@ struct identifier_detail {
     bool is_constant = true;
     // used to check whether this identifier was already defined when traversing the IR
     bool already_defined = false;
+    int parameter_index = -1;
+    // index to function_info of the function where this parameter belongs
+    int function_info_ind = -1;
+    // includes indexes of expression_tree where this variable is used
+    std::vector<int> references = {};
+    // references to order
+    std::vector<std::pair<identifier_scopes*, int>> order_references = {};
+    std::vector<identifier_scopes*> assignment_references = {};
+    std::vector<int> function_call_references = {};
+    std::vector<int> array_access_references = {};
+    std::vector<int> for_statement_init = {};
+    std::vector<int> for_statement_after = {};
 };
 
 struct expression_tree {
@@ -155,6 +169,7 @@ struct expression_tree {
     int args_array_access_index = -1;
     int args_function_call_index = -1;
     int args_list_index = -1;
+    bool been_renamed = false;
     // std::unique_ptr<expression_tree> parent;
     expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, int ind = -1) : node(n), type(t), left(nullptr), right(nullptr) {
         switch (t) {
@@ -229,7 +244,7 @@ struct identifier_scopes {
         }
         return &val;
     }
-    const std::list<identifier_scopes>& get_lower() const { return lower; }
+    std::list<identifier_scopes>& get_lower() { return lower; }
     identifier_scopes& get_upper() const { return *upper; }
     int get_index() const { return index; }
     intermediate_representation* get_ir() const { return ir; }
@@ -309,6 +324,8 @@ struct intermediate_representation {
     // stores return statements that appear across all source code
     // the value represents the index of the expression involved in the return statement (or some negative value if no expression was used)
     std::vector<int> return_statements;
+    bool has_strings = false;
+    bool has_arrays = false;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},
@@ -318,3 +335,4 @@ struct intermediate_representation {
 };
 
 void check_ir(intermediate_representation& ir);
+#endif
