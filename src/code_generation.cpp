@@ -99,7 +99,7 @@ std::string generate_array_access(intermediate_representation& ir, int array_acc
 
 std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
     auto& call = ir.function_calls[function_call_index];
-    std::string result = call.identifier + '(';
+    std::string result = (call.identifier == "to_string" ? "std::" : "") + call.identifier + '(';
     if (call.args.size() >= 1) {
         result += generate_expression(ir, ir.expressions[call.args[0]]);
         for (size_t i = 1; i < call.args.size(); i++) {

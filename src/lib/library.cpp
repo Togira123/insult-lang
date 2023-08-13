@@ -53,6 +53,25 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
+    } else if (id_name == "to_string") {
+        // convert a number or boolean value to a string
+        static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::INT_TYPE};
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(ts.size());
+        if (!has_been_added_to_ir) {
+            for (size_t i = 0; i < ts.size(); i++) {
+                auto* cur_scope = ir.scopes.new_scope();
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"].parameter_index = 0;
+                cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
+                fi[i] = ir.function_info.size();
+                ir.function_info.push_back({{types::STRING_TYPE}, {"value"}, true, cur_scope});
+            }
+            has_been_added_to_ir = true;
+            ir.used_library_functions.insert("to_string");
+        }
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        return id;
     } else if (id_name == "copy") {
         // return a copy of the given array instead of passing by reference
         static bool has_been_added_to_ir = false;

@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_set>
 
-const std::unordered_set<std::string> library_functions = {"print", "read_line", "size", "copy", "ref"};
+const std::unordered_set<std::string> library_functions = {"print", "read_line", "size", "to_string", "copy", "ref"};
 
 identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name);
 
