@@ -2,6 +2,7 @@
 #include "../include/generate_code.h"
 #include "../include/optimize.h"
 #include "../include/scanner.h"
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -1243,17 +1244,25 @@ int main(int argc, char* argv[]) {
 
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
-            std::cout << "success!\n";
             check_ir(ir);
             optimize(ir);
             // check_ir(ir);
-            std::string output_file = "out.cpp";
+            std::string output_file = "a.out";
             if (argc >= 3) {
                 output_file = argv[2];
             }
-            std::ofstream outstream(output_file);
+            std::string tmp_file = "";
+            do {
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                tmp_file = "inslt_gen_" + std::to_string(ms) + ".cpp";
+            } while (std::filesystem::exists(tmp_file));
+            std::ofstream outstream(tmp_file);
             outstream << generate_code(ir);
             outstream.close();
+            if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+                throw std::runtime_error("gcc is required on your system to compile this program");
+            }
+            std::filesystem::remove(tmp_file);
             return 0;
         }
     }

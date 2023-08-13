@@ -1,3 +1,4 @@
+#include "../ir.h"
 #include <string>
 #include <unordered_set>
 
