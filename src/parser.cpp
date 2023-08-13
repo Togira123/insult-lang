@@ -1247,7 +1247,13 @@ int main(int argc, char* argv[]) {
             check_ir(ir);
             optimize(ir);
             // check_ir(ir);
-            std::cout << generate_code(ir);
+            std::string output_file = "out.cpp";
+            if (argc >= 3) {
+                output_file = argv[2];
+            }
+            std::ofstream outstream(output_file);
+            outstream << generate_code(ir);
+            outstream.close();
             return 0;
         }
     }

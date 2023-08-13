@@ -17,10 +17,11 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::VOID_TYPE}, {"message"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
+            ir.used_library_functions.insert("print");
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
-    } else if (id_name == "readline") {
+    } else if (id_name == "read_line") {
         // reads a line from stdin
         static bool has_been_added_to_ir = false;
         static std::vector<size_t> fi(1);
@@ -29,6 +30,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             fi[0] = ir.function_info.size();
             ir.function_info.push_back({{types::STRING_TYPE}, {}, true, cur_scope});
             has_been_added_to_ir = true;
+            ir.used_library_functions.insert("read_line");
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
@@ -47,14 +49,12 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::INT_TYPE}, {"container"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
+            ir.used_library_functions.insert("size");
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
     } else if (id_name == "copy") {
         // return a copy of the given array instead of passing by reference
-        static const std::vector<full_type> ts = {
-            {types::STRING_TYPE},
-        };
         static bool has_been_added_to_ir = false;
         static std::vector<size_t> fi(1);
         if (!has_been_added_to_ir) {
@@ -90,3 +90,25 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         throw std::runtime_error("no definition found for " + id_name);
     }
 }
+
+std::string generate_print() {
+    static std::string result = "void print(bool b){\n\tstd::cout<<b<<std::endl;\n}\n"
+                                "void print(double d){\n\tstd::cout<<d<<std::endl;\n}\n"
+                                "void print(int i){\n\tstd::cout<<i<<std::endl;\n}\n"
+                                "void print(std::string s){\n\tstd::cout<<s<<std::endl;\n}\n";
+    return result;
+}
+
+std::string generate_read_line() {
+    static std::string result = "std::string read_line(){\n\tstd::string s;\n\tstd::getline(std::cin,s);\n\treturn s;\n}\n";
+    return result;
+};
+
+std::string generate_size() {
+    static std::string result = "int size(std::string s){\n\treturn s.length();\n}\n"
+                                "template<typename template_array_size>"
+                                "int size(std::vector<template_array_size> v){\n\treturn v.size();\n}\n";
+    return result;
+}
+
+// copy and ref don't require actual functions their functiality will be implemented directly in the generated code

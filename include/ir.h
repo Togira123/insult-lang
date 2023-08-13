@@ -134,7 +134,6 @@ struct identifier_detail {
     // looking at other stuff
     full_type type;
     // references the expression that initialized this identifier. Negative if not applicable yet
-    // if initialized_with_definition is false, this will take the value of the first expression that is assigned to this variable
     int initializing_expression;
     // whether the variable has been initialized during definition
     bool initialized_with_definition;
@@ -326,6 +325,8 @@ struct intermediate_representation {
     std::vector<int> return_statements;
     bool has_strings = false;
     bool has_arrays = false;
+    bool has_fast_exponent = false;
+    std::unordered_set<std::string> used_library_functions;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},

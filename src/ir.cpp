@@ -109,8 +109,14 @@ full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& roo
                     }
                 }
                 throw std::runtime_error("expected other types");
-            } else if (root.node == "-" || root.node == "*" || root.node == "/" || root.node == "%" || root.node == "^") {
+            } else if (root.node == "-" || root.node == "*" || root.node == "/" || root.node == "%" || root.node == "^" || root.node == "#") {
                 if ((left.type == types::INT_TYPE || left.type == types::DOUBLE_TYPE) && left.is_assignable_to(right)) {
+                    if (root.node == "^" && left.type == types::INT_TYPE && right.type == types::INT_TYPE) {
+                        // since both arguments are integers we can use exponentation by squaring which is fast
+                        // change the node to "#" to let code generation later use that fast approach instead of the std::pow() function
+                        cur_scope->get_ir()->has_fast_exponent = true;
+                        root.node = "#";
+                    }
                     return left.type == types::INT_TYPE && right.type == types::INT_TYPE ? full_type{types::INT_TYPE} : full_type{types::DOUBLE_TYPE};
                 }
                 throw std::runtime_error("expected expression to be of a numeric type");
@@ -256,7 +262,6 @@ full_type validate_list(identifier_scopes* cur_scope, int list_index) {
 
 void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, int order_ind) {
     static auto& ir = *cur_scope->get_ir();
-    id.already_defined = true;
     if (order_ind >= 0) {
         id.order_references.push_back({cur_scope, order_ind});
     }
@@ -277,6 +282,7 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
     } else if (!ir.has_arrays && id.type.type == types::ARRAY_TYPE) {
         ir.has_arrays = true;
     }
+    id.already_defined = true;
 }
 
 void handle_for_statement(for_statement_struct& for_statement, size_t index) {

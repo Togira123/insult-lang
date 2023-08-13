@@ -1,13 +1,129 @@
 #include "../include/optimize.h"
+#include "../include/lib/library.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 std::string& get_next_identifier_name() {
+    // list from https://en.cppreference.com/w/cpp/keyword
+    static const std::unordered_set<std::string> reserved_cpp_keywords = {
+        "alignas",
+        "alignof",
+        "and",
+        "and_eq",
+        "asm",
+        "atomic_cancel",
+        "atomic_commit",
+        "atomic_noexcept",
+        "auto",
+        "bitand",
+        "bitor",
+        "bool",
+        "break",
+        "case",
+        "catch",
+        "char",
+        "char8_t",
+        "char16_t",
+        "char32_t",
+        "class",
+        "compl",
+        "concept",
+        "const",
+        "consteval",
+        "constexpr",
+        "constinit",
+        "const_cast",
+        "continue",
+        "co_await",
+        "co_return",
+        "co_yield",
+        "decltype",
+        "default",
+        "delete",
+        "do",
+        "double",
+        "dynamic_cast",
+        "else",
+        "enum",
+        "explicit",
+        "export",
+        "extern",
+        "false",
+        "float",
+        "for",
+        "friend",
+        "goto",
+        "if",
+        "inline",
+        "int",
+        "long",
+        "mutable",
+        "namespace",
+        "new",
+        "noexcept",
+        "not",
+        "not_eq",
+        "nullptr",
+        "operator",
+        "or",
+        "or_eq",
+        "private",
+        "protected",
+        "public",
+        "reflexpr",
+        "register",
+        "reinterpret_cast",
+        "requires",
+        "return",
+        "short",
+        "signed",
+        "sizeof",
+        "static",
+        "static_assert",
+        "static_cast",
+        "struct",
+        "switch",
+        "synchronized",
+        "template",
+        "this",
+        "thread_local",
+        "throw",
+        "true",
+        "try",
+        "typedef",
+        "typeid",
+        "typename",
+        "union",
+        "unsigned",
+        "using",
+        "virtual",
+        "void",
+        "volatile",
+        "wchar_t",
+        "while",
+        "xor",
+        "xor_eq",
+        "final",
+        "final",
+        "override",
+        "transaction_safe",
+        "transaction_safe_dynamic",
+        "import",
+        "module",
+    };
     static std::string last = "a";
     if (last.back() == 'z') {
-        return last += 'a';
+        last += 'a';
+        if (library_functions.count(last) || reserved_cpp_keywords.count(last)) {
+            return get_next_identifier_name();
+        }
+        return last;
     }
     last.back()++;
+    if (library_functions.count(last) || reserved_cpp_keywords.count(last)) {
+        return get_next_identifier_name();
+    }
     return last;
 }
 
@@ -41,6 +157,9 @@ void rename_identifiers(identifier_scopes& scope) {
     // for each identifier rename it and also rename all references
     std::unordered_map<std::string, identifier_detail> new_names;
     for (auto& [name, id] : scope.identifiers) {
+        if (library_functions.count(name)) {
+            continue;
+        }
         std::string& new_name = get_next_identifier_name();
         for (int exp : id.references) {
             rename_identifier_in_exp(ir.expressions[exp], name, new_name);
