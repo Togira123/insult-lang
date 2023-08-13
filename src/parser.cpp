@@ -1260,6 +1260,7 @@ int main(int argc, char* argv[]) {
             outstream << generate_code(ir);
             outstream.close();
             if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+                std::filesystem::remove(tmp_file);
                 throw std::runtime_error("gcc is required on your system to compile this program");
             }
             std::filesystem::remove(tmp_file);

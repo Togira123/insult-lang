@@ -103,7 +103,7 @@ std::string generate_function_call(intermediate_representation& ir, int function
     if (call.args.size() >= 1) {
         result += generate_expression(ir, ir.expressions[call.args[0]]);
         for (size_t i = 1; i < call.args.size(); i++) {
-            result += ',' + generate_expression(ir, ir.expressions[i]);
+            result += ',' + generate_expression(ir, ir.expressions[call.args[i]]);
         }
     }
     return result + ')';
@@ -246,7 +246,7 @@ std::string generate_function(function_detail& fd, std::string& function_name) {
 std::string generate_global_var_declarations(intermediate_representation& ir, size_t order_index) {
     std::string result = "";
     auto& cur_statement = ir.scopes.order[order_index];
-    if (cur_statement.type == statement_type::INITIALIZATION) {
+    if (!cur_statement.is_comment && cur_statement.type == statement_type::INITIALIZATION) {
         result += data_type_to_string(ir.scopes.identifiers[cur_statement.identifier_name].type) + ' ' + cur_statement.identifier_name + ";\n";
     }
     return result;
@@ -255,7 +255,7 @@ std::string generate_global_var_declarations(intermediate_representation& ir, si
 std::string generate_function_definitions(intermediate_representation& ir, size_t order_index) {
     std::string result = "";
     auto& cur_statement = ir.scopes.order[order_index];
-    if (cur_statement.type == statement_type::FUNCTION) {
+    if (!cur_statement.is_comment && cur_statement.type == statement_type::FUNCTION) {
         result += generate_function(ir.function_info[cur_statement.index], cur_statement.identifier_name);
     }
     return result;
@@ -264,6 +264,9 @@ std::string generate_function_definitions(intermediate_representation& ir, size_
 std::string generate_statement(identifier_scopes* cur, size_t order_index) {
     static auto& ir = *cur->get_ir();
     auto& cur_statement = cur->order[order_index];
+    if (cur_statement.is_comment) {
+        return "";
+    }
     std::string offset = std::string(cur->level + 1, '\t');
     switch (cur_statement.type) {
     case statement_type::FOR:

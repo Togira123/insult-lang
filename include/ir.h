@@ -206,6 +206,7 @@ struct order_struct {
     size_t index;
     statement_type type;
     std::string identifier_name = "";
+    bool is_comment = false;
 };
 
 struct identifier_scopes {
