@@ -327,5 +327,5 @@ std::string generate_code(intermediate_representation& ir) {
     for (size_t order_index = 0; order_index < ir.scopes.order.size(); order_index++) {
         result += generate_statement(&ir.scopes, order_index);
     }
-    return result + "}\n}\nsigned main(){generated_code::main();}";
+    return result + "return 0;\n}\n}\nsigned main(){generated_code::main();}";
 }
