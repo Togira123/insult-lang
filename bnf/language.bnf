@@ -36,7 +36,7 @@ data_type ::= raw_data_type, {"[]"}
 
 identifier ::= letter | "_", {letter | digit | "_"}
 
-assignment ::= identifier, "=", expression
+assignment ::= identifier | array_access, "=", expression
 
 definition ::= "def", identifier, ":", data_type
 

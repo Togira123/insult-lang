@@ -1,4 +1,5 @@
 #include "../include/generate_code.h"
+#include "../include/lib/fail_programs.h"
 #include "../include/lib/library.h"
 
 std::string generate_expression(intermediate_representation& ir, expression_tree& root);
@@ -165,8 +166,8 @@ std::string generate_definition(identifier_scopes* cur_scope, const std::string&
     return result;
 }
 
-std::string generate_assignment(intermediate_representation& ir, const std::string& name, expression_tree& exp) {
-    return name + '=' + generate_expression(ir, exp);
+std::string generate_assignment(intermediate_representation& ir, expression_tree& name, expression_tree& exp) {
+    return generate_expression(ir, name) + '=' + generate_expression(ir, exp);
 }
 
 std::string generate_for_loop(for_statement_struct& for_statement) {
@@ -177,14 +178,15 @@ std::string generate_for_loop(for_statement_struct& for_statement) {
             result +=
                 generate_definition(for_statement.body, for_statement.init_statement, for_statement.body->identifiers[for_statement.init_statement]);
         } else {
-            result += generate_assignment(ir, for_statement.init_statement,
-                                          ir.expressions[for_statement.body->assignments[for_statement.init_statement][for_statement.init_index]]);
+            result +=
+                generate_assignment(ir, for_statement.body->assignments[for_statement.init_statement][for_statement.init_index].first,
+                                    ir.expressions[for_statement.body->assignments[for_statement.init_statement][for_statement.init_index].second]);
         }
     }
     result += ';' + generate_expression(ir, ir.expressions[for_statement.condition]) + ';';
     if (for_statement.after != "") {
-        result += generate_assignment(ir, for_statement.after,
-                                      ir.expressions[for_statement.body->assignments[for_statement.after][for_statement.after_index]]);
+        result += generate_assignment(ir, for_statement.body->assignments[for_statement.after][for_statement.after_index].first,
+                                      ir.expressions[for_statement.body->assignments[for_statement.after][for_statement.after_index].second]);
     }
     result += "){\n";
     for (size_t order_index = 0; order_index < for_statement.body->order.size(); order_index++) {
@@ -286,8 +288,8 @@ std::string generate_statement(identifier_scopes* cur, size_t order_index) {
         return "";
     case statement_type::ASSIGNMENT:
         return offset +
-               generate_assignment(ir, cur_statement.identifier_name,
-                                   ir.expressions[cur->assignments[cur_statement.identifier_name][cur_statement.index]]) +
+               generate_assignment(ir, cur->assignments[cur_statement.identifier_name][cur_statement.index].first,
+                                   ir.expressions[cur->assignments[cur_statement.identifier_name][cur_statement.index].second]) +
                ";\n";
     case statement_type::INITIALIZATION: {
         std::string res;
@@ -326,9 +328,10 @@ std::string generate_code(intermediate_representation& ir) {
     for (size_t order_index = 0; order_index < ir.scopes.order.size(); order_index++) {
         result += generate_function_definitions(ir, order_index);
     }
-    result += "signed main(){\n";
+    result += "signed main(){\ntry{\n";
     for (size_t order_index = 0; order_index < ir.scopes.order.size(); order_index++) {
         result += generate_statement(&ir.scopes, order_index);
     }
-    return result + "return 0;\n}\n}\nsigned main(){generated_code::main();}";
+    return result + "return 0;\n}catch(std::exception& e){\nthrow std::string(\"" + get_random_error_message() +
+           "\");}\n}\n}\nsigned main(){generated_code::main();}";
 }

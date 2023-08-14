@@ -463,13 +463,14 @@ void handle_function(function_detail& fd, std::string& function_name, int order_
 
 void handle_assignment(identifier_scopes* scope, std::string& name, int index, int order_ind) {
     static intermediate_representation& ir = *scope->get_ir();
-    int ind = scope->assignments[name][index];
+    int ind = scope->assignments[name][index].second;
     auto& id = get_identifier_definition(scope, name, -1);
     id.assignment_references.push_back(scope);
     if (order_ind >= 0) {
         id.order_references.push_back({scope, order_ind});
     }
-    if (!id.type.is_assignable_to(evaluate_expression(scope, ir.expressions[ind], ind))) {
+    if (!evaluate_expression(scope, scope->assignments[name][index].first, -1)
+             .is_assignable_to(evaluate_expression(scope, ir.expressions[ind], ind))) {
         throw std::runtime_error("expression is not assignable to identifier");
     }
 }

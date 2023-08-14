@@ -37,10 +37,10 @@ struct temp_expr_tree {
         // but also store the identifier, in case we have to delete it afterwards due to it being part of a non-please statement
         identifier_names.push_back(identifier);
     }
-    void add_assignment_to_cur_scope(std::string& identifier, int ind) {
+    void add_assignment_to_cur_scope(std::string& identifier, int ind, expression_tree& identifier_tree) {
         last_assignment = identifier;
         // add to IR as usual
-        (*cur_scope)->assignments[identifier].push_back(ind);
+        (*cur_scope)->assignments[identifier].push_back({std::move(identifier_tree), ind});
         last_assignment_ind = (*cur_scope)->assignments[identifier].size() - 1;
         // store identifier name in case we need to delete later
         assignments.push_back(identifier);

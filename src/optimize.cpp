@@ -163,7 +163,7 @@ bool includes_function_call(expression_tree& root) {
 
 void rename_identifiers(identifier_scopes& scope) {
     static auto& ir = *scope.get_ir();
-    static std::unordered_map<identifier_scopes*, std::unordered_map<std::string, std::vector<int>>> new_names_assignment;
+    static std::unordered_map<identifier_scopes*, std::unordered_map<std::string, std::vector<std::pair<expression_tree, int>>>> new_names_assignment;
     // for each identifier rename it and also rename all references
     std::unordered_map<std::string, identifier_detail> new_names;
     for (auto& [name, id] : scope.identifiers) {
@@ -188,6 +188,12 @@ void rename_identifiers(identifier_scopes& scope) {
         }
         for (identifier_scopes* s : id.assignment_references) {
             new_names_assignment[s][new_name] = std::move(s->assignments[name]);
+            for (auto& v : new_names_assignment[s][new_name]) {
+                if (!v.first.been_renamed) {
+                    v.first.node = new_name;
+                    v.first.been_renamed = true;
+                }
+            }
         }
         references_besides_definition += id.assignment_references.size();
         for (int i : id.function_call_references) {

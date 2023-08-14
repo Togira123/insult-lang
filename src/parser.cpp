@@ -269,6 +269,9 @@ std::unique_ptr<expression_tree> construct_exp_tree(const int start_index) {
 inline bool newline() { return tokens.current().name == token_type::NEWLINE; }
 
 bool program();
+
+std::pair<std::string, int> array_access();
+
 // passing "1" for add_to_ir will add it to the ir, passing "2" will add it directly (not to temp tree)
 inline bool expression(int iteration = 0, int add_to_ir = 0);
 
@@ -491,14 +494,29 @@ bool partial_assignment() {
 }
 
 bool assignment() {
-    if (identifier()) {
-        std::string identifier_name = tokens.current().value;
+    int cur_ind = tokens.current_index();
+    std::pair<std::string, int> p = {"", -1};
+    if ((p = array_access()).first != "" || identifier()) {
+        std::string identifier_name;
+        expression_tree tree = {node_type::IDENTIFIER, ""};
+        if (p.first == "") {
+            identifier_name = tokens.current().value;
+            tree.node = identifier_name;
+        } else {
+            identifier_name = p.first;
+            tree.type = node_type::ARRAY_ACCESS;
+            tree.node = identifier_name;
+            tree.args_array_access_index = p.second;
+        }
         tokens.next();
         if (partial_assignment()) {
-            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index());
+            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index(), tree);
             // current_scope->assignments[identifier_name].push_back(tmp_exp_tree.last_exp_index());
             return true;
         }
+        tokens.previous();
+    }
+    while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
     return false;
@@ -1288,7 +1306,7 @@ int main(int argc, char* argv[]) {
         outstream << get_random_program();
     }
     outstream.close();
-    if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+    if (std::system(("g++ -Wall -o " + output_file + " -D_GLIBCXX_DEBUG -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("gcc is required on your system to compile this program");
     }
