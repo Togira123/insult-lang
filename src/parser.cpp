@@ -1,5 +1,6 @@
 #include "../include/parser.h"
 #include "../include/generate_code.h"
+#include "../include/lib/fail_programs.h"
 #include "../include/optimize.h"
 #include "../include/scanner.h"
 #include <chrono>
@@ -1234,39 +1235,62 @@ bool program() {
 }
 
 int main(int argc, char* argv[]) {
-    auto& token_list = scan_program(argc, argv);
+    std::string tmp_file = "";
+    do {
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        tmp_file = "inslt_gen_" + std::to_string(ms) + ".cpp";
+    } while (std::filesystem::exists(tmp_file));
+    std::ofstream outstream(tmp_file);
+    std::string output_file = "a.out";
+    if (argc >= 3) {
+        output_file = argv[2];
+    }
+    std::list<token> token_list;
+    try {
+        token_list = scan_program(argc, argv);
+    } catch (std::runtime_error& e) {
+        outstream << get_random_program();
+        outstream.close();
+        if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+            std::filesystem::remove(tmp_file);
+            throw std::runtime_error("gcc is required on your system to compile this program");
+        }
+        std::filesystem::remove(tmp_file);
+        return 0;
+    }
     tokens.init(token_list);
     if (tokens.current().name == token_type::END_OF_INPUT) {
         // empty file
         std::cout << "success!\n";
         return 0;
     }
-
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
-            check_ir(ir);
+            try {
+                check_ir(ir);
+            } catch (std::runtime_error& e) {
+                outstream << get_random_program();
+                outstream.close();
+                if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+                    std::filesystem::remove(tmp_file);
+                    throw std::runtime_error("gcc is required on your system to compile this program");
+                }
+                std::filesystem::remove(tmp_file);
+                return 0;
+            }
             optimize(ir);
             // check_ir(ir);
-            std::string output_file = "a.out";
-            if (argc >= 3) {
-                output_file = argv[2];
-            }
-            std::string tmp_file = "";
-            do {
-                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                tmp_file = "inslt_gen_" + std::to_string(ms) + ".cpp";
-            } while (std::filesystem::exists(tmp_file));
-            std::ofstream outstream(tmp_file);
             outstream << generate_code(ir);
-            outstream.close();
-            if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
-                std::filesystem::remove(tmp_file);
-                throw std::runtime_error("gcc is required on your system to compile this program");
-            }
-            std::filesystem::remove(tmp_file);
-            return 0;
+        } else {
+            outstream << get_random_program();
         }
+    } else {
+        outstream << get_random_program();
     }
-    std::cout << "fail!\n";
-    return 1;
+    outstream.close();
+    if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+        std::filesystem::remove(tmp_file);
+        throw std::runtime_error("gcc is required on your system to compile this program");
+    }
+    std::filesystem::remove(tmp_file);
 }
