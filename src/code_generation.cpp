@@ -308,9 +308,7 @@ std::string generate_code(intermediate_representation& ir) {
     if (ir.used_library_functions.count("print") || ir.used_library_functions.count("read_line")) {
         result += "#include <iostream>\n";
     }
-    if (ir.has_strings) {
-        result += "#include <string>\n";
-    }
+    result += "#include <string>\n";
     if (ir.has_arrays) {
         result += "#include <vector>\n";
     }

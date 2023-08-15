@@ -33,9 +33,7 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
                     evaluate_expression(cur_scope, ir.expressions[cur_scope->identifiers[name].initializing_expression],
                                         cur_scope->identifiers[name].initializing_expression);
             }
-            if (!ir.has_strings && cur_scope->identifiers[name].type.type == types::STRING_TYPE) {
-                ir.has_strings = true;
-            } else if (!ir.has_arrays && cur_scope->identifiers[name].type.type == types::ARRAY_TYPE) {
+            if (!ir.has_arrays && cur_scope->identifiers[name].type.type == types::ARRAY_TYPE) {
                 ir.has_arrays = true;
             }
             if (exp_ind >= 0) {
@@ -180,9 +178,7 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
                     fd.return_type = {types::VOID_TYPE};
                 }
             }
-            if (!ir.has_strings && fd.return_type.type == types::STRING_TYPE) {
-                ir.has_strings = true;
-            } else if (!ir.has_arrays && fd.return_type.type == types::ARRAY_TYPE) {
+            if (!ir.has_arrays && fd.return_type.type == types::ARRAY_TYPE) {
                 ir.has_arrays = true;
             }
             function_calls_set.erase(fd.body);
@@ -277,9 +273,7 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
     if (!id.type.is_assignable_to(evaluate_expression(cur_scope, ir.expressions[id.initializing_expression], id.initializing_expression))) {
         throw std::runtime_error("expression not assignable to identifier");
     }
-    if (!ir.has_strings && id.type.type == types::STRING_TYPE) {
-        ir.has_strings = true;
-    } else if (!ir.has_arrays && id.type.type == types::ARRAY_TYPE) {
+    if (!ir.has_arrays && id.type.type == types::ARRAY_TYPE) {
         ir.has_arrays = true;
     }
     id.already_defined = true;

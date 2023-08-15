@@ -325,7 +325,6 @@ struct intermediate_representation {
     // stores return statements that appear across all source code
     // the value represents the index of the expression involved in the return statement (or some negative value if no expression was used)
     std::vector<int> return_statements;
-    bool has_strings = false;
     bool has_arrays = false;
     bool has_fast_exponent = false;
     std::unordered_set<std::string> used_library_functions;
