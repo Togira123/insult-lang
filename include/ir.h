@@ -7,10 +7,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-// none is applied if no type can be found which will result in an error
-// unknown is applid if no type can directly be found but it has the potential to be inferred later
-// VOID_TYPE is only used to describe functions that don't return anything
-enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, VOID_TYPE, FUNCTION_TYPE, ARRAY_TYPE, UNKNOWN_TYPE, NONE_TYPE };
+// unknown is applied if no type can directly be found but it has the potential to be inferred later or used for arrays where the array type is not
+// clear (yet). VOID_TYPE is only used to describe functions that don't return anything
+enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, VOID_TYPE, FUNCTION_TYPE, ARRAY_TYPE, UNKNOWN_TYPE };
 
 enum class node_type { IDENTIFIER, PUNCTUATION, OPERATOR, INT, DOUBLE, BOOL, STRING, FUNCTION_CALL, ARRAY_ACCESS, LIST };
 
@@ -28,7 +27,7 @@ struct full_type {
     types array_type;
     int dimension;
     // only applicable if type == FUNCTION
-    // points to an item in  function_info vector in intermediate_representation struct
+    // points to an item in function_info vector in intermediate_representation struct
     std::vector<size_t> function_info;
     full_type(types t = types::UNKNOWN_TYPE, types at = types::UNKNOWN_TYPE, int d = 0, std::vector<size_t> fi = {})
         : type(t), array_type(at), dimension(d), function_info(fi) {}
