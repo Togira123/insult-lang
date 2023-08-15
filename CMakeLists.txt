@@ -18,5 +18,5 @@ file(GLOB all_srcs
     ${PROJECT_SOURCE_DIR}/src/*.cpp
 )
 add_executable(a.out ${all_srcs})
-add_test(NAME parser_test COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/input1.txt)
-add_test(NAME fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fibonacci.inslt)
+add_test(NAME parser_test COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/input1.txt test_output_parser_test)
+add_test(NAME fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fibonacci.inslt test_output_fibonacci)
