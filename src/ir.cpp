@@ -465,7 +465,7 @@ void handle_assignment(identifier_scopes* scope, std::string& name, int index, i
     static intermediate_representation& ir = *scope->get_ir();
     int ind = scope->assignments[name][index].second;
     auto& id = get_identifier_definition(scope, name, -1);
-    id.assignment_references.push_back(scope);
+    id.assignment_references.insert(scope);
     if (order_ind >= 0) {
         id.order_references.push_back({scope, order_ind});
     }

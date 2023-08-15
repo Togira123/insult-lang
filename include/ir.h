@@ -149,7 +149,7 @@ struct identifier_detail {
     std::vector<int> references = {};
     // references to order
     std::vector<std::pair<identifier_scopes*, int>> order_references = {};
-    std::vector<identifier_scopes*> assignment_references = {};
+    std::unordered_set<identifier_scopes*> assignment_references = {};
     std::vector<int> function_call_references = {};
     std::vector<int> array_access_references = {};
     std::vector<int> for_statement_init = {};

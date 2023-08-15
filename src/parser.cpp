@@ -661,13 +661,13 @@ std::pair<std::string, int> function_call() {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
                     continue;
-                } else if (expression(0, 1)) {
+                } else if (expression(0, 2)) {
                     calls.push_back({tmp_exp_tree.last_exp_index()});
                     tokens.next();
                     while (true) {
                         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                             tokens.next();
-                            if (expression(0, 1)) {
+                            if (expression(0, 2)) {
                                 calls.push_back(tmp_exp_tree.last_exp_index());
                                 tokens.next();
                                 continue;
