@@ -72,36 +72,41 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
-    } else if (id_name == "copy") {
-        // return a copy of the given array instead of passing by reference
-        static bool has_been_added_to_ir = false;
-        static std::vector<size_t> fi(1);
-        if (!has_been_added_to_ir) {
-            auto* cur_scope = ir.scopes.new_scope();
-            cur_scope->identifiers["container"] = {{types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, -1, true, true, true};
-            cur_scope->identifiers["container"].parameter_index = 0;
-            cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
-            fi[0] = ir.function_info.size();
-            ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, {"container"}, true, cur_scope});
-            has_been_added_to_ir = true;
-        }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
-        return id;
-    } else if (id_name == "ref") {
-        // return a reference to the given value instead of a copy
-        static const std::vector<types> ts = {types::INT_TYPE, types::DOUBLE_TYPE, types::BOOL_TYPE, types::STRING_TYPE};
+    } else if (id_name == "to_int") {
+        // convert a bool, double or string to an int
+        static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::STRING_TYPE};
         static bool has_been_added_to_ir = false;
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["container"] = {{ts[i]}, -1, true, true, true};
-                cur_scope->identifiers["container"].parameter_index = 0;
-                cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"].parameter_index = 0;
+                cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
-                ir.function_info.push_back({{ts[i]}, {"container"}, true, cur_scope});
+                ir.function_info.push_back({{types::INT_TYPE}, {"value"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
+            ir.used_library_functions.insert("to_int");
+        }
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        return id;
+    } else if (id_name == "to_double") {
+        // convert a bool, int or string to a double
+        static const std::vector<types> ts = {types::BOOL_TYPE, types::INT_TYPE, types::STRING_TYPE};
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(ts.size());
+        if (!has_been_added_to_ir) {
+            for (size_t i = 0; i < ts.size(); i++) {
+                auto* cur_scope = ir.scopes.new_scope();
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"].parameter_index = 0;
+                cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
+                fi[i] = ir.function_info.size();
+                ir.function_info.push_back({{types::DOUBLE_TYPE}, {"value"}, true, cur_scope});
+            }
+            has_been_added_to_ir = true;
+            ir.used_library_functions.insert("to_double");
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
@@ -114,7 +119,7 @@ std::string generate_print() {
     static std::string result = "void print(bool b){\n\tstd::cout<<b<<std::endl;\n}\n"
                                 "void print(double d){\n\tstd::cout<<d<<std::endl;\n}\n"
                                 "void print(int i){\n\tstd::cout<<i<<std::endl;\n}\n"
-                                "void print(std::string s){\n\tstd::cout<<s<<std::endl;\n}\n";
+                                "void print(const std::string& s){\n\tstd::cout<<s<<std::endl;\n}\n";
     return result;
 }
 
@@ -124,10 +129,38 @@ std::string generate_read_line() {
 };
 
 std::string generate_size() {
-    static std::string result = "int size(std::string s){\n\treturn s.length();\n}\n"
+    static std::string result = "int size(const std::string& s){\n\treturn s.length();\n}\n"
                                 "template<typename template_array_size>"
-                                "int size(std::vector<template_array_size> v){\n\treturn v.size();\n}\n";
+                                "int size(const std::vector<template_array_size>& v){\n\treturn v.size();\n}\n";
     return result;
 }
 
-// copy and ref don't require actual functions their functiality will be implemented directly in the generated code
+std::string generate_to_int() {
+    static std::string result = "int to_int(bool b){\n\treturn (int)b;\n}\n"
+                                "int to_int(double d){\n\treturn (int)d;\n}\n"
+
+                                "int to_int(const std::string& s){\n"
+                                "\tsize_t p=0;\n"
+                                "\tint i=std::stoll(s,&p);\n"
+                                "\tif(p!=s.length()){\n"
+                                "\t\tthrow std::runtime_error(\"cannot convert\");\n"
+                                "\t}\n"
+                                "\treturn i;\n"
+                                "}\n";
+    return result;
+}
+
+std::string generate_to_double() {
+    static std::string result = "double to_double(bool b){\n\treturn (double)b;\n}\n"
+                                "double to_double(int i){\n\treturn (double)i;\n}\n"
+
+                                "double to_double(const std::string& s){\n"
+                                "\tsize_t p=0;\n"
+                                "\tdouble d=std::stod(s,&p);\n"
+                                "\tif(p!=s.length()){\n"
+                                "\t\tthrow std::runtime_error(\"cannot convert\");\n"
+                                "\t}\n"
+                                "\treturn d;\n"
+                                "}\n";
+    return result;
+}

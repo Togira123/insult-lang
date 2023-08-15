@@ -43,6 +43,10 @@ std::string generate_library_functions(intermediate_representation& ir) {
             result += generate_read_line();
         } else if (func == "size") {
             result += generate_size();
+        } else if (func == "to_int") {
+            result += generate_to_int();
+        } else if (func == "to_double") {
+            result += generate_to_double();
         }
     }
     return result;
@@ -134,7 +138,7 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
         case node_type::LIST:
             return generate_list(ir, root.args_list_index);
         case node_type::STRING:
-            return '"' + root.node + '"';
+            return "std::string(\"" + root.node + "\")";
         default:
             return root.node;
         }
@@ -330,6 +334,6 @@ std::string generate_code(intermediate_representation& ir) {
     for (size_t order_index = 0; order_index < ir.scopes.order.size(); order_index++) {
         result += generate_statement(&ir.scopes, order_index);
     }
-    return result + "return 0;\n}catch(std::exception& e){\nthrow std::string(\"" + get_random_error_message() +
-           "\");}\n}\n}\nsigned main(){generated_code::main();}";
+    return result + "return 0;\n}catch(std::exception& e){\nstd::cout<<\"" + get_random_error_message() +
+           "\";\nreturn 1;\n}\n}\n}\nsigned main(){generated_code::main();}";
 }

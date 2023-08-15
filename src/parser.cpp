@@ -72,34 +72,6 @@ identifier_scopes* current_scope = &ir.scopes;
 
 temp_expr_tree tmp_exp_tree(ir.expressions, &current_scope);
 
-/* full_type get_identifier_type(const std::string& name) {
-    auto& cur_scope = current_scope;
-    while (true) {
-        if (cur_scope->identifiers.count(name)) {
-            return cur_scope->identifiers[name].type;
-        } else if (cur_scope->level == 0) {
-            // no definition found searching all the way up to global scope
-            return {types::NONE_TYPE, types::NONE_TYPE, 0, nullptr};
-        } else {
-            cur_scope = cur_scope->upper_scope();
-        }
-    }
-} */
-
-/* full_type get_function_return_type(const std::string& function_name) {
-    auto& cur_scope = current_scope;
-    while (true) {
-        if (cur_scope.functions.count(function_name)) {
-            return cur_scope.functions[function_name].return_type;
-        } else if (cur_scope.level == 0) {
-            // no function definition found searching all the way up to global scope
-            return {types::NONE_TYPE, types::NONE_TYPE, 0};
-        } else {
-            cur_scope = *cur_scope.upper;
-        }
-    }
-} */
-
 inline bool is_identifier_or_constant(const token& t) {
     switch (t.name) {
     case token_type::DOUBLE:

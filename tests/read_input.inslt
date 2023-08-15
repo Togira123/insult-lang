@@ -1,0 +1,4 @@
+
+print("Please input an integer") please
+def first_line = read_line() please
+print(to_int(first_line) + 1) please
