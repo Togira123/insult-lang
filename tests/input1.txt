@@ -1,4 +1,12 @@
-def i = -2 please
+def i = -2 * -3 + 4 please
+def s = "hello" + " world" please
+def b = s please
+def z = true && false please
+def x = false || true >= false please
+def y = !true && (false || true == true) please
+def zz = z please
+def xx = x please
+def yy = y please
 def j = -3 + 4 * 2 - 4^5 please
 def k = i + j please
 def l: int please

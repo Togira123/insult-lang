@@ -1,5 +1,5 @@
 def a = [[1, 2], [3, 4]] please
-a[0] = [0, 1] please
+a[0] = [0] + [1] please
 a[0][0] = -1 please
 
 for (def i = 0; i < size(a); i = i + 1) {
