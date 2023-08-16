@@ -51,6 +51,7 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
 }
 
 full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind) {
+    static auto& ir = *cur_scope->get_ir();
     if (root.type != node_type::OPERATOR) {
         switch (root.type) {
         case node_type::ARRAY_ACCESS:
@@ -96,23 +97,35 @@ full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& roo
                     return {types::BOOL_TYPE};
                 }
                 throw std::runtime_error("expected expressions to be assignable");
-            } else if (root.node == "+") {
+            } else if (root.node == "+" || root.node == "$") {
                 if (left.type != types::BOOL_TYPE && left.is_assignable_to(right)) {
                     switch (left.type) {
                     case types::INT_TYPE:
                         return right.type == types::INT_TYPE ? full_type{types::INT_TYPE} : full_type{types::DOUBLE_TYPE};
+                    case types::ARRAY_TYPE:
+                        if (!ir.has_add_vectors) {
+                            ir.has_add_vectors = true;
+                            // both arguments are arrays which has to be marked in order to handle them correctly when generating code
+                            root.node = "$";
+                        }
+                        // no break on purpose because we still have to return
                     default:
-                        // left == (ARRAY_TYPE || DOUBLE_TYPE || STRING_TYPE)
+                        // left == (DOUBLE_TYPE || STRING_TYPE)
                         return left;
                     }
                 }
                 throw std::runtime_error("expected other types");
-            } else if (root.node == "-" || root.node == "*" || root.node == "/" || root.node == "%" || root.node == "^" || root.node == "#") {
+            } else if (root.node == "%") {
+                if (left.type == types::INT_TYPE && right.type == types::INT_TYPE) {
+                    return {types::INT_TYPE};
+                }
+                throw std::runtime_error("expected two integers for % operator");
+            } else if (root.node == "-" || root.node == "*" || root.node == "/" || root.node == "^" || root.node == "#") {
                 if ((left.type == types::INT_TYPE || left.type == types::DOUBLE_TYPE) && left.is_assignable_to(right)) {
                     if (root.node == "^" && left.type == types::INT_TYPE && right.type == types::INT_TYPE) {
                         // since both arguments are integers we can use exponentation by squaring which is fast
                         // change the node to "#" to let code generation later use that fast approach instead of the std::pow() function
-                        cur_scope->get_ir()->has_fast_exponent = true;
+                        ir.has_fast_exponent = true;
                         root.node = "#";
                     }
                     return left.type == types::INT_TYPE && right.type == types::INT_TYPE ? full_type{types::INT_TYPE} : full_type{types::DOUBLE_TYPE};

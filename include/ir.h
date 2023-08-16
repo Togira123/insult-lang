@@ -326,6 +326,7 @@ struct intermediate_representation {
     std::vector<int> return_statements;
     bool has_arrays = false;
     bool has_fast_exponent = false;
+    bool has_add_vectors = false;
     std::unordered_set<std::string> used_library_functions;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},

@@ -4,9 +4,12 @@
 #include <unordered_set>
 #include <vector>
 
+void constant_folding(intermediate_representation& ir);
+
 std::string& get_next_identifier_name() {
     // list from https://en.cppreference.com/w/cpp/keyword
     static const std::unordered_set<std::string> reserved_cpp_keywords = {
+        "add_vectors", // needed in inslt std library
         "alignas",
         "alignof",
         "and",
@@ -237,7 +240,323 @@ void rename_identifiers(identifier_scopes& scope) {
 void optimize(intermediate_representation& ir) {
     // rename all identifiers
     rename_identifiers(ir.scopes);
+    constant_folding(ir);
+}
+
+bool is_constant_value(const expression_tree& node) {
+    switch (node.type) {
+    case node_type::BOOL:
+    case node_type::DOUBLE:
+    case node_type::INT:
+    case node_type::STRING:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool to_bool(const std::string& s) { return s == "true"; }
+
+void fold_tree(expression_tree& root) {
+    if (root.type == node_type::OPERATOR) {
+        fold_tree(*root.right);
+        bool is_constant_expr = is_constant_value(*root.right);
+        if (root.left == nullptr) {
+            if (is_constant_expr) {
+                if (root.node == "!") {
+                    root.node = root.right->node == "true" ? "false" : "true";
+                    root.type = node_type::BOOL;
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                } else if (root.node == "+") {
+                    root.type = root.right->type;
+                    root.node = std::move(root.right->node);
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                } else if (root.node == "-") {
+                    root.type = root.right->type;
+                    root.node = '-' + std::move(root.right->node);
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                }
+            }
+        } else {
+            fold_tree(*root.left);
+            if (is_constant_expr && is_constant_value(*root.left)) {
+                if (root.node == "||") {
+                    root.type = node_type::BOOL;
+                    if (root.right->node == "false") {
+                        root.node = root.left->node == "true" ? "true" : "false";
+                    } else {
+                        root.node = "true";
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "&&") {
+                    root.type = node_type::BOOL;
+                    if (root.right->node == "false") {
+                        root.node = "false";
+                    } else {
+                        root.node = root.left->node == "true" ? "true" : "false";
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "==") {
+                    root.type = node_type::BOOL;
+                    root.node = root.right->node == root.left->node ? "true" : "false";
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "!=") {
+                    root.type = node_type::BOOL;
+                    root.node = root.right->node == root.left->node ? "false" : "true";
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == ">") {
+                    switch (root.left->type) {
+                    case node_type::BOOL:
+                        root.type = node_type::BOOL;
+                        root.node = to_bool(root.left->node) > to_bool(root.right->node) ? "true" : "false";
+                        break;
+                    case node_type::DOUBLE:
+                        root.type = node_type::BOOL;
+                        root.node = std::stod(root.left->node) >
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::INT:
+                        root.type = node_type::BOOL;
+                        root.node = std::stoll(root.left->node) >
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::STRING:
+                        root.type = node_type::BOOL;
+                        root.node = root.left->node > root.right->node ? "true" : "false";
+                        break;
+                    default:
+                        return;
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == ">=") {
+                    switch (root.left->type) {
+                    case node_type::BOOL:
+                        root.type = node_type::BOOL;
+                        root.node = to_bool(root.left->node) >= to_bool(root.right->node) ? "true" : "false";
+                        break;
+                    case node_type::DOUBLE:
+                        root.type = node_type::BOOL;
+                        root.node = std::stod(root.left->node) >=
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::INT:
+                        root.type = node_type::BOOL;
+                        root.node = std::stoll(root.left->node) >=
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::STRING:
+                        root.type = node_type::BOOL;
+                        root.node = root.left->node >= root.right->node ? "true" : "false";
+                        break;
+                    default:
+                        return;
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "<") {
+                    switch (root.left->type) {
+                    case node_type::BOOL:
+                        root.type = node_type::BOOL;
+                        root.node = to_bool(root.left->node) < to_bool(root.right->node) ? "true" : "false";
+                        break;
+                    case node_type::DOUBLE:
+                        root.type = node_type::BOOL;
+                        root.node = std::stod(root.left->node) <
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::INT:
+                        root.type = node_type::BOOL;
+                        root.node = std::stoll(root.left->node) <
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::STRING:
+                        root.type = node_type::BOOL;
+                        root.node = root.left->node < root.right->node ? "true" : "false";
+                        break;
+                    default:
+                        return;
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "<=") {
+                    switch (root.left->type) {
+                    case node_type::BOOL:
+                        root.type = node_type::BOOL;
+                        root.node = to_bool(root.left->node) <= to_bool(root.right->node) ? "true" : "false";
+                        break;
+                    case node_type::DOUBLE:
+                        root.type = node_type::BOOL;
+                        root.node = std::stod(root.left->node) <=
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::INT:
+                        root.type = node_type::BOOL;
+                        root.node = std::stoll(root.left->node) <=
+                                            (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node))
+                                        ? "true"
+                                        : "false";
+                        break;
+                    case node_type::STRING:
+                        root.type = node_type::BOOL;
+                        root.node = root.left->node <= root.right->node ? "true" : "false";
+                        break;
+                    default:
+                        return;
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "+") {
+                    switch (root.left->type) {
+                    case node_type::DOUBLE:
+                        root.type = node_type::DOUBLE;
+                        root.node =
+                            std::to_string(std::stod(root.left->node) +
+                                           (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node)));
+                        break;
+                    case node_type::INT:
+                        root.type = root.right->type == node_type::DOUBLE ? node_type::DOUBLE : node_type::INT;
+                        if (root.right->type == node_type::INT) {
+                            root.node = std::to_string(std::stoll(root.left->node) + std::stoll(root.right->node));
+                        } else {
+                            root.node = std::to_string(std::stoll(root.left->node) + std::stod(root.right->node));
+                        }
+                        break;
+                    case node_type::STRING:
+                        root.type = node_type::STRING;
+                        root.node = std::move(root.left->node) + std::move(root.right->node);
+                        break;
+                    default:
+                        return;
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "-") {
+                    if (root.left->type == node_type::DOUBLE) {
+                        root.type = node_type::DOUBLE;
+                        root.node =
+                            std::to_string(std::stod(root.left->node) -
+                                           (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node)));
+                    } else {
+                        if (root.right->type == node_type::DOUBLE) {
+                            root.type = node_type::DOUBLE;
+                            root.node = std::to_string(std::stoll(root.left->node) - std::stod(root.right->node));
+                        } else {
+                            root.type = node_type::INT;
+                            root.node = std::to_string(std::stoll(root.left->node) - std::stoll(root.right->node));
+                        }
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "*") {
+                    if (root.left->type == node_type::DOUBLE) {
+                        root.type = node_type::DOUBLE;
+                        root.node =
+                            std::to_string(std::stod(root.left->node) *
+                                           (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node)));
+                    } else {
+                        if (root.right->type == node_type::DOUBLE) {
+                            root.type = node_type::DOUBLE;
+                            root.node = std::to_string(std::stoll(root.left->node) * std::stod(root.right->node));
+                        } else {
+                            root.type = node_type::INT;
+                            root.node = std::to_string(std::stoll(root.left->node) * std::stoll(root.right->node));
+                        }
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "/") {
+                    if (root.left->type == node_type::DOUBLE) {
+                        root.type = node_type::DOUBLE;
+                        root.node =
+                            std::to_string(std::stod(root.left->node) /
+                                           (root.right->type == node_type::DOUBLE ? std::stod(root.right->node) : std::stoll(root.right->node)));
+                    } else {
+                        if (root.right->type == node_type::DOUBLE) {
+                            root.type = node_type::DOUBLE;
+                            root.node = std::to_string(std::stoll(root.left->node) / std::stod(root.right->node));
+                        } else {
+                            root.type = node_type::INT;
+                            root.node = std::to_string(std::stoll(root.left->node) / std::stoll(root.right->node));
+                        }
+                    }
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "%") {
+                    root.type = node_type::INT;
+                    root.node = std::to_string(std::stoll(root.left->node) % std::stoll(root.right->node));
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "^") {
+                    // has to be two ints because otherwise this would've been "#"
+                    root.type = node_type::DOUBLE;
+                    double b = std::stoll(root.left->node);
+                    long long e = std::stoll(root.right->node);
+                    if (e < 0) {
+                        b = 1 / b;
+                        e = -e;
+                    }
+                    double r = 1;
+                    while (e > 0) {
+                        if (e & 1) {
+                            r *= b;
+                        }
+                        b *= b;
+                        e >>= 1;
+                    }
+                    root.node = std::to_string(r);
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                } else if (root.node == "#") {
+                    root.type = node_type::DOUBLE;
+                    root.node = std::to_string(std::pow(std::stod(root.left->node), std::stod(root.right->node)));
+                    // delete folded part (pointers are indeed deleted because of unique_ptr) https://stackoverflow.com/a/15070946/14553195
+                    root.right = nullptr;
+                    root.left = nullptr;
+                }
+            }
+        }
+    }
 }
 
 // evaluates constant expressions and replaces them with the computed value
-void constant_folding(intermediate_representation& ir) {}
+void constant_folding(intermediate_representation& ir) {
+    for (auto& tree : ir.expressions) {
+        fold_tree(tree);
+    }
+}

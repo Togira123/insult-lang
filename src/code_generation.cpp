@@ -2,7 +2,7 @@
 #include "../include/lib/fail_programs.h"
 #include "../include/lib/library.h"
 
-std::string generate_expression(intermediate_representation& ir, expression_tree& root);
+std::string generate_expression(intermediate_representation& ir, expression_tree& root, const std::string& assignee = "nullptr");
 
 std::string generate_statement(identifier_scopes* cur, size_t order_index);
 
@@ -93,6 +93,24 @@ std::string generate_pow_function() {
            "}\n";
 }
 
+std::string generate_add_vectors_function() {
+    return "template<typename v>std::vector<v>add_vectors(std::vector<v>& a,const std::vector<v>& b,std::vector<v>* p){\n"
+           "\tif(p==&a){\n"
+           "\t\ta.insert(a.end(),b.begin(),b.end());\n"
+           "\t\treturn a;\n"
+           "\t}\n"
+           "\tstd::vector<v> tmp=a;\n"
+           "\ttmp.insert(tmp.end(), b.begin(), b.end());"
+           "\treturn tmp;\n"
+           "}\n"
+
+           "template<typename v>std::vector<v>add_vectors(const std::vector<v>& a,const std::vector<v>& b,std::vector<v>* p){\n"
+           "\tstd::vector<v> tmp=a;\n"
+           "\ttmp.insert(tmp.end(), b.begin(), b.end());"
+           "\treturn tmp;\n"
+           "}\n";
+}
+
 std::string generate_array_access(intermediate_representation& ir, int array_access_index) {
     auto& access = ir.array_accesses[array_access_index];
     std::string result = access.identifier;
@@ -126,7 +144,7 @@ std::string generate_list(intermediate_representation& ir, int list_index) {
     return result + '}';
 }
 
-std::string generate_expression(intermediate_representation& ir, expression_tree& root) {
+std::string generate_expression(intermediate_representation& ir, expression_tree& root, const std::string& assignee) {
     if (root.type != node_type::OPERATOR) {
         switch (root.type) {
         case node_type::ARRAY_ACCESS:
@@ -144,14 +162,16 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
         }
     } else {
         if (root.left == nullptr) {
-            return root.node + generate_expression(ir, *root.right);
+            return root.node + generate_expression(ir, *root.right, assignee);
         } else {
-            std::string left = generate_expression(ir, *root.left);
-            std::string right = generate_expression(ir, *root.right);
+            std::string left = generate_expression(ir, *root.left, assignee);
+            std::string right = generate_expression(ir, *root.right, assignee);
             if (root.node == "^") {
                 return "std::pow(" + left + "," + right + ")";
             } else if (root.node == "#") {
                 return "a(" + left + "," + right + ")";
+            } else if (root.node == "$") { // is a "+" for array types
+                return "add_vectors(" + left + "," + right + ",&" + assignee + ")";
             } else {
                 return left + root.node + right;
             }
@@ -171,7 +191,8 @@ std::string generate_definition(identifier_scopes* cur_scope, const std::string&
 }
 
 std::string generate_assignment(intermediate_representation& ir, expression_tree& name, expression_tree& exp) {
-    return generate_expression(ir, name) + '=' + generate_expression(ir, exp);
+    std::string assignee = generate_expression(ir, name);
+    return assignee + '=' + generate_expression(ir, exp, assignee);
 }
 
 std::string generate_for_loop(for_statement_struct& for_statement) {
@@ -309,10 +330,8 @@ std::string generate_statement(identifier_scopes* cur, size_t order_index) {
 
 std::string generate_code(intermediate_representation& ir) {
     std::string result = "";
-    if (ir.used_library_functions.count("print") || ir.used_library_functions.count("read_line")) {
-        result += "#include <iostream>\n";
-    }
-    result += "#include <string>\n";
+    result += "#include <iostream>\n"
+              "#include <string>\n";
     if (ir.has_arrays) {
         result += "#include <vector>\n";
     }
@@ -323,6 +342,9 @@ std::string generate_code(intermediate_representation& ir) {
     result += generate_library_functions(ir);
     if (ir.has_fast_exponent) {
         result += generate_pow_function();
+    }
+    if (ir.has_add_vectors) {
+        result += generate_add_vectors_function();
     }
     for (size_t order_index = 0; order_index < ir.scopes.order.size(); order_index++) {
         result += generate_global_var_declarations(ir, order_index);
