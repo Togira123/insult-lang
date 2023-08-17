@@ -1251,8 +1251,7 @@ int main(int argc, char* argv[]) {
     tokens.init(token_list);
     if (tokens.current().name == token_type::END_OF_INPUT) {
         // empty file
-        std::cout << "success!\n";
-        return 0;
+        throw std::runtime_error("input file is empty");
     }
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
@@ -1278,6 +1277,7 @@ int main(int argc, char* argv[]) {
         outstream << get_random_program();
     }
     outstream.close();
+    // TODO: add "-w" flag which supresses all warnings
     if (std::system(("g++ -Wall -o " + output_file + " -D_GLIBCXX_DEBUG -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("gcc is required on your system to compile this program");
