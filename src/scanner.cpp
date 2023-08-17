@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-const int N = 128;
+const int N = 1024;
 
 std::ifstream file;
 std::list<token> token_list = {{token_type::END_OF_INPUT, ""}};
