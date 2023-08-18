@@ -1,0 +1,15 @@
+def n = to_int(read_line()) please
+
+def memo:int[] = array(n, 0) please
+
+thanks fun fib(n: int): int {
+    if (n < 2) {
+        return n please
+    }
+    if (memo[n] == 0) {
+        memo[n] = fib(n - 1) + fib(n - 2) please
+    }
+    return memo[n]
+}
+
+print(fib(n)) please

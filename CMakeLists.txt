@@ -22,3 +22,4 @@ add_test(NAME parser_test COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/input1.txt t
 add_test(NAME fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fibonacci.inslt test_output_fibonacci)
 add_test(NAME multi_dimensional_array COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/multi_dimensional_array.inslt test_output_multi_dimensional_array)
 add_test(NAME read_input COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/read_input.inslt test_output_read_input)
+add_test(NAME fast_fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fast_fibonacci.inslt test_output_fast_fibonacci)
