@@ -1,5 +1,5 @@
 
-def n = 20 please
+def n = to_int(read_line()) please
 
 thanks fun g(n: int) {
     if (n < 2) {
