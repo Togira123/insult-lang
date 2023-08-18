@@ -122,11 +122,11 @@ std::string generate_array_access(intermediate_representation& ir, int array_acc
     return result;
 }
 
-std::string generate_function_call(intermediate_representation& ir, int function_call_index, const std::string& assignee) {
+std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
     auto& call = ir.function_calls[function_call_index];
     std::string result = (call.identifier == "to_string" && ir.used_library_functions.count("to_string") ? "std::" : "") + call.identifier;
     if (call.identifier == "array" && ir.used_library_functions.count("array")) {
-        full_type ft = ir.defining_scope_of_identifier[assignee]->identifiers[assignee].type;
+        full_type ft = call.type;
         if (ft.dimension == 1) {
             ft = {ft.array_type};
         } else {
@@ -165,7 +165,7 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
         case node_type::ARRAY_ACCESS:
             return generate_array_access(ir, root.args_array_access_index);
         case node_type::FUNCTION_CALL:
-            return generate_function_call(ir, root.args_function_call_index, assignee);
+            return generate_function_call(ir, root.args_function_call_index);
         case node_type::IDENTIFIER:
             return root.node;
         case node_type::LIST:

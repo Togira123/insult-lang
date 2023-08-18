@@ -8,7 +8,7 @@ void check_statement(identifier_scopes* cur, size_t order_index);
 
 full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind, full_type array_call_container_arg);
 
-full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg);
+full_type& validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg);
 
 full_type validate_array_access(identifier_scopes* cur_scope, int array_access, int exp_ind, full_type array_call_container_arg);
 
@@ -149,7 +149,7 @@ void check_function_body(identifier_scopes* body) {
     }
 }
 
-full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg) {
+full_type& validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg) {
     static std::unordered_set<identifier_scopes*> function_calls_set;
     static auto& ir = *cur_scope->get_ir();
     auto& call = ir.function_calls[function_call];
@@ -172,13 +172,15 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
                 auto& id = fd.body->identifiers[fd.parameter_list[i]];
                 if (t != id.type) {
                     if (t.is_assignable_to(id.type)) {
-                        indirect_match = overload;
+                        matched = false;
+                        continue;
                     }
                     matched = false;
                     break;
                 }
             }
             if (!matched) {
+                indirect_match = overload;
                 continue;
             }
             if (function_calls_set.count(fd.body)) {
@@ -199,7 +201,7 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
                 ir.has_arrays = true;
             }
             function_calls_set.erase(fd.body);
-            return fd.return_type;
+            return call.type = fd.return_type;
         }
     }
     if (indirect_match > -1) {
@@ -222,7 +224,7 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
             ir.has_arrays = true;
         }
         function_calls_set.erase(fd.body);
-        return fd.return_type;
+        return call.type = fd.return_type;
     }
     throw std::runtime_error("no matching overload found");
 }
@@ -242,7 +244,7 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access, 
         if (access.args.size() == 1 &&
             evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[access.args[0]], access.args[0], array_call_container_arg).type ==
                 types::INT_TYPE) {
-            return {types::STRING_TYPE};
+            return access.type = {types::STRING_TYPE};
         } else {
             throw std::runtime_error("invalid array access");
         }
@@ -258,28 +260,28 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access, 
         dimension--;
     }
     if (dimension > 0) {
-        return {types::ARRAY_TYPE, array_type, dimension};
+        return access.type = {types::ARRAY_TYPE, array_type, dimension};
     }
     if (dimension == 0) {
-        return {array_type};
+        return access.type = {array_type};
     }
     // dimension == -1
     // array type is STRING_TYPE
-    return {types::STRING_TYPE};
+    return access.type = {types::STRING_TYPE};
 }
 
 full_type validate_list(identifier_scopes* cur_scope, int list_index, full_type array_call_container_arg) {
     auto& list = cur_scope->get_ir()->lists[list_index];
     if (list.args.size() == 0) {
         // unknown array type, assignable to any kind of array
-        return {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1};
+        return list.type = {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1};
     }
     if (list.args.size() == 1) {
         full_type t = evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[0]], list.args[0], array_call_container_arg);
         if (t.type == types::ARRAY_TYPE) {
-            return {types::ARRAY_TYPE, t.array_type, t.dimension + 1};
+            return list.type = {types::ARRAY_TYPE, t.array_type, t.dimension + 1};
         } else if (t.type == types::BOOL_TYPE || t.type == types::DOUBLE_TYPE || t.type == types::INT_TYPE || t.type == types::STRING_TYPE) {
-            return {types::ARRAY_TYPE, t.type, 1};
+            return list.type = {types::ARRAY_TYPE, t.type, 1};
         } else {
             throw std::runtime_error("unexpected type");
         }
@@ -293,9 +295,9 @@ full_type validate_list(identifier_scopes* cur_scope, int list_index, full_type 
         }
     }
     if (expected_type.type == types::ARRAY_TYPE) {
-        return {types::ARRAY_TYPE, expected_type.array_type, expected_type.dimension + 1};
+        return list.type = {types::ARRAY_TYPE, expected_type.array_type, expected_type.dimension + 1};
     }
-    return {types::ARRAY_TYPE, expected_type.type, 1};
+    return list.type = {types::ARRAY_TYPE, expected_type.type, 1};
 }
 
 void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, int order_ind) {

@@ -268,6 +268,7 @@ struct args_list {
     int end_of_array;
     std::vector<size_t> args;
     std::string identifier;
+    full_type type = {};
 };
 
 struct if_statement_struct {
