@@ -297,7 +297,7 @@ inline std::pair<bool, int> list_expression() {
             // ir.lists[cur_ind] = {tokens.current_index(), std::vector<int>{}, ""};
             return {true, cur_ind};
         }
-        if (expression(0, 1)) {
+        if (expression(0, 2)) {
             std::vector<size_t> args = {tmp_exp_tree.last_exp_index()};
             tokens.next();
             while (true) {
@@ -309,7 +309,7 @@ inline std::pair<bool, int> list_expression() {
                 }
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                     tokens.next();
-                    if (expression(0, 1)) {
+                    if (expression(0, 2)) {
                         args.push_back(tmp_exp_tree.last_exp_index());
                         tokens.next();
                         continue;
@@ -687,7 +687,7 @@ std::pair<std::string, int> array_access() {
             iterations++;
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
                 tokens.next();
-                if (expression(0, 1)) {
+                if (expression(0, 2)) {
                     args.push_back(tmp_exp_tree.last_exp_index());
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
@@ -699,11 +699,7 @@ std::pair<std::string, int> array_access() {
             } else if (iterations > 1) {
                 tokens.previous();
                 tmp_exp_tree.add_array_access_to_ir(cur_ind, {tokens.current_index(), std::move(args), identifier_name});
-                if (tmp_exp_tree.accept_expressions()) {
-                    return {identifier_name, cur_ind};
-                } else {
-                    break;
-                }
+                return {identifier_name, cur_ind};
             } else {
                 break;
             }

@@ -47,6 +47,8 @@ std::string generate_library_functions(intermediate_representation& ir) {
             result += generate_to_int();
         } else if (func == "to_double") {
             result += generate_to_double();
+        } else if (func == "array") {
+            result += generate_array();
         }
     }
     return result;
@@ -120,13 +122,26 @@ std::string generate_array_access(intermediate_representation& ir, int array_acc
     return result;
 }
 
-std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
+std::string generate_function_call(intermediate_representation& ir, int function_call_index, const std::string& assignee) {
     auto& call = ir.function_calls[function_call_index];
-    std::string result = (call.identifier == "to_string" ? "std::" : "") + call.identifier + '(';
+    std::string result = (call.identifier == "to_string" && ir.used_library_functions.count("to_string") ? "std::" : "") + call.identifier;
+    if (call.identifier == "array" && ir.used_library_functions.count("array")) {
+        full_type ft = ir.defining_scope_of_identifier[assignee]->identifiers[assignee].type;
+        if (ft.dimension == 1) {
+            ft = {ft.array_type};
+        } else {
+            ft.dimension--;
+        }
+        result += '<' + data_type_to_string(ft) + '>';
+    }
+    result += '(';
     if (call.args.size() >= 1) {
         result += generate_expression(ir, ir.expressions[call.args[0]]);
         for (size_t i = 1; i < call.args.size(); i++) {
             result += ',' + generate_expression(ir, ir.expressions[call.args[i]]);
+        }
+        if (call.identifier == "array" && ir.used_library_functions.count("array") && ir.expressions[call.args[1]].type == node_type::INT) {
+            result += "LL";
         }
     }
     return result + ')';
@@ -150,7 +165,7 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
         case node_type::ARRAY_ACCESS:
             return generate_array_access(ir, root.args_array_access_index);
         case node_type::FUNCTION_CALL:
-            return generate_function_call(ir, root.args_function_call_index);
+            return generate_function_call(ir, root.args_function_call_index, assignee);
         case node_type::IDENTIFIER:
             return root.node;
         case node_type::LIST:
@@ -183,7 +198,7 @@ std::string generate_definition(identifier_scopes* cur_scope, const std::string&
     static auto& ir = *cur_scope->get_ir();
     std::string result = cur_scope->level == 0 ? name : data_type_to_string(id.type) + ' ' + name;
     if (id.initialized_with_definition) {
-        result += '=' + generate_expression(ir, ir.expressions[id.initializing_expression]);
+        result += '=' + generate_expression(ir, ir.expressions[id.initializing_expression], name);
     } else if (cur_scope->level == 0) {
         return "";
     }

@@ -4,8 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-void constant_folding(intermediate_representation& ir);
-
 std::string& get_next_identifier_name() {
     // list from https://en.cppreference.com/w/cpp/keyword
     static const std::unordered_set<std::string> reserved_cpp_keywords = {
@@ -228,6 +226,7 @@ void rename_identifiers(identifier_scopes& scope) {
             }
         } else {
             new_names[new_name] = std::move(id);
+            ir.defining_scope_of_identifier[new_name] = &scope;
         }
     }
     scope.assignments = std::move(new_names_assignment[&scope]);
@@ -235,12 +234,6 @@ void rename_identifiers(identifier_scopes& scope) {
         rename_identifiers(s);
     }
     scope.identifiers = std::move(new_names);
-}
-
-void optimize(intermediate_representation& ir) {
-    // rename all identifiers
-    rename_identifiers(ir.scopes);
-    constant_folding(ir);
 }
 
 bool is_constant_value(const expression_tree& node) {
@@ -559,4 +552,10 @@ void constant_folding(intermediate_representation& ir) {
     for (auto& tree : ir.expressions) {
         fold_tree(tree);
     }
+}
+
+void optimize(intermediate_representation& ir) {
+    // rename all identifiers
+    rename_identifiers(ir.scopes);
+    constant_folding(ir);
 }

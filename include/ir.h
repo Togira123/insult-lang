@@ -70,7 +70,13 @@ struct full_type {
         }
         return ft;
     }
-    // only converts bool, double, int and string
+    bool operator==(const full_type& other) {
+        return type == types::ARRAY_TYPE      ? (type == other.type && array_type == other.array_type && dimension == other.dimension)
+               : type == types::FUNCTION_TYPE ? (type == other.type && function_info == other.function_info)
+                                              : type == other.type;
+    }
+    bool operator!=(const full_type& other) { return !(*this == other); }
+    //  only converts bool, double, int and string
     static full_type to_type(const node_type node) {
         switch (node) {
         case node_type::BOOL:
@@ -97,7 +103,7 @@ struct full_type {
         case types::ARRAY_TYPE:
             return other.type == types::ARRAY_TYPE &&
                    (array_type == other.array_type || (array_type == types::UNKNOWN_TYPE || other.array_type == types::UNKNOWN_TYPE)) &&
-                   (dimension == other.dimension || dimension == -1 || other.dimension == -1);
+                   (dimension >= other.dimension || dimension == -1 || other.dimension == -1);
         default:
             return false;
         }
@@ -217,7 +223,7 @@ struct identifier_scopes {
     // all assignments happening in the current scope (excluding definitions that are assignments too)
     // key of the map is the identifier being assigned to something
     // value of the map is a pair where the first value is an expression tree which describes the identifier used (might be array access), the second
-    // value is the index of the expression the identifier is being assigned and the
+    // value is the index of the expression the identifier is being assigned
     std::unordered_map<std::string, std::vector<std::pair<expression_tree, int>>> assignments;
     identifier_scopes(intermediate_representation* ir_pointer, int l = 0, std::unordered_map<std::string, identifier_detail> i = {})
         : level(l), identifiers(i), upper(nullptr), lower({}), index(0), ir(ir_pointer){};
@@ -328,6 +334,8 @@ struct intermediate_representation {
     bool has_fast_exponent = false;
     bool has_add_vectors = false;
     std::unordered_set<std::string> used_library_functions;
+    // filled after renaming to prevent clashes with two identifiers named the same
+    std::unordered_map<std::string, identifier_scopes*> defining_scope_of_identifier;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},

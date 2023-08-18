@@ -1,7 +1,8 @@
+#include "../../include/lib/library.h"
 #include "../../include/ir.h"
 #include <vector>
 
-identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name) {
+identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type array_call_container_arg) {
     if (id_name == "print") {
         // print a value to stdout
         static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::INT_TYPE, types::STRING_TYPE};
@@ -110,6 +111,50 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         }
         static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
         return id;
+    } else if (id_name == "array") {
+        // create an array with a pre-determined size
+        static const std::vector<full_type> ts = {
+            {types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, {types::BOOL_TYPE}, {types::DOUBLE_TYPE}, {types::INT_TYPE}, {types::STRING_TYPE}};
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(ts.size());
+        static identifier_scopes* last_scope;
+        if (!has_been_added_to_ir) {
+            auto* cur_scope = ir.scopes.new_scope();
+            cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true, true};
+            cur_scope->identifiers["size"].parameter_index = 0;
+            cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
+            fi[0] = ir.function_info.size();
+            ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, {"size"}, true, cur_scope});
+            for (size_t i = 0; i < ts.size(); i++) {
+                auto* cur_scope = ir.scopes.new_scope();
+                cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true, true};
+                cur_scope->identifiers["size"].parameter_index = 0;
+                cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
+                cur_scope->identifiers["container"] = {ts[i], -1, true, true, true};
+                cur_scope->identifiers["container"].parameter_index = 1;
+                cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+                fi[i + 1] = ir.function_info.size();
+                if (ts[i].type == types::ARRAY_TYPE) {
+                    ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 2}, {"size", "container"}, true, cur_scope});
+                } else {
+                    ir.function_info.push_back({{types::ARRAY_TYPE, ts[i].type, 1}, {"size", "container"}, true, cur_scope});
+                }
+                last_scope = cur_scope;
+            }
+            has_been_added_to_ir = true;
+            ir.used_library_functions.insert("array");
+        }
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, true, true, true};
+        if (id.type.function_info.size() > 6) {
+            id.type.function_info.pop_back();
+        }
+        if (array_call_container_arg.type == types::ARRAY_TYPE) {
+            array_call_container_arg.dimension++;
+            id.type.function_info.push_back(ir.function_info.size());
+            ir.function_info.push_back({array_call_container_arg, {"size", "container"}, true, last_scope});
+            return id;
+        }
+        return id;
     } else {
         throw std::runtime_error("no definition found for " + id_name);
     }
@@ -161,6 +206,18 @@ std::string generate_to_double() {
                                 "\t\tthrow std::runtime_error(\"cannot convert\");\n"
                                 "\t}\n"
                                 "\treturn d;\n"
+                                "}\n";
+    return result;
+}
+
+std::string generate_array() {
+    static std::string result = "template<typename v>"
+                                "std::vector<v> array(int i,v c){\n"
+                                "\treturn std::vector<v>(i, c);\n"
+                                "}\n"
+                                "template<typename v>"
+                                "std::vector<v> array(int i){\n"
+                                "\treturn std::vector<v>(i);\n"
                                 "}\n";
     return result;
 }

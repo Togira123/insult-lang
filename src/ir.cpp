@@ -6,18 +6,18 @@ bool function_returns_in_all_paths(identifier_scopes* cur_scope);
 
 void check_statement(identifier_scopes* cur, size_t order_index);
 
-full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind);
+full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind, full_type array_call_container_arg);
 
-full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind);
+full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg);
 
-full_type validate_array_access(identifier_scopes* cur_scope, int array_access, int exp_ind);
+full_type validate_array_access(identifier_scopes* cur_scope, int array_access, int exp_ind, full_type array_call_container_arg);
 
-full_type validate_list(identifier_scopes* cur_scope, int list_index);
+full_type validate_list(identifier_scopes* cur_scope, int list_index, full_type array_call_container_arg);
 
 void handle_assignment(identifier_scopes* scope, std::string& name, int index, int order_ind);
 
 // makes sure that the type of identifier is set
-identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::string& name, int exp_ind) {
+identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::string& name, int exp_ind, full_type array_call_container_arg = {}) {
     static auto& ir = *cur_scope->get_ir();
     while (true) {
         if (cur_scope->identifiers.count(name)) {
@@ -31,7 +31,7 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
             if (cur_scope->identifiers[name].type.type == types::UNKNOWN_TYPE) {
                 cur_scope->identifiers[name].type =
                     evaluate_expression(cur_scope, ir.expressions[cur_scope->identifiers[name].initializing_expression],
-                                        cur_scope->identifiers[name].initializing_expression);
+                                        cur_scope->identifiers[name].initializing_expression, array_call_container_arg);
             }
             if (!ir.has_arrays && cur_scope->identifiers[name].type.type == types::ARRAY_TYPE) {
                 ir.has_arrays = true;
@@ -43,31 +43,31 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
         } else if (cur_scope->level == 0) {
             // no definition found searching all the way up to global scope
             // check if it's a std library name
-            return identifier_detail_of(ir, name);
+            return identifier_detail_of(ir, name, array_call_container_arg);
         } else {
             cur_scope = cur_scope->upper_scope();
         }
     }
 }
 
-full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind) {
+full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& root, int exp_ind, full_type array_call_container_arg = {}) {
     static auto& ir = *cur_scope->get_ir();
     if (root.type != node_type::OPERATOR) {
         switch (root.type) {
         case node_type::ARRAY_ACCESS:
-            return validate_array_access(cur_scope, root.args_array_access_index, exp_ind);
+            return validate_array_access(cur_scope, root.args_array_access_index, exp_ind, array_call_container_arg);
         case node_type::FUNCTION_CALL:
-            return validate_function_call(cur_scope, root.args_function_call_index, exp_ind);
+            return validate_function_call(cur_scope, root.args_function_call_index, exp_ind, array_call_container_arg);
         case node_type::IDENTIFIER:
-            return get_identifier_definition(cur_scope, root.node, exp_ind).type;
+            return get_identifier_definition(cur_scope, root.node, exp_ind, array_call_container_arg).type;
         case node_type::LIST:
-            return validate_list(cur_scope, root.args_list_index);
+            return validate_list(cur_scope, root.args_list_index, array_call_container_arg);
         default:
             return full_type::to_type(root.type);
         }
     } else {
         if (root.left == nullptr) {
-            full_type right = evaluate_expression(cur_scope, *root.right, exp_ind);
+            full_type right = evaluate_expression(cur_scope, *root.right, exp_ind, array_call_container_arg);
             // unary operator
             if (root.node == "!") {
                 if (right.type == types::BOOL_TYPE) {
@@ -84,8 +84,8 @@ full_type evaluate_expression(identifier_scopes* cur_scope, expression_tree& roo
                 throw std::runtime_error("something unexpected happened");
             }
         } else {
-            full_type left = evaluate_expression(cur_scope, *root.left, exp_ind);
-            full_type right = evaluate_expression(cur_scope, *root.right, exp_ind);
+            full_type left = evaluate_expression(cur_scope, *root.left, exp_ind, array_call_container_arg);
+            full_type right = evaluate_expression(cur_scope, *root.right, exp_ind, array_call_container_arg);
             if (root.node == "||" || root.node == "&&") {
                 // both left and right must be BOOL_TYPE
                 if (left.type == types::BOOL_TYPE && right.type == types::BOOL_TYPE) {
@@ -149,27 +149,31 @@ void check_function_body(identifier_scopes* body) {
     }
 }
 
-full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind) {
+full_type validate_function_call(identifier_scopes* cur_scope, int function_call, int exp_ind, full_type array_call_container_arg) {
     static std::unordered_set<identifier_scopes*> function_calls_set;
     static auto& ir = *cur_scope->get_ir();
     auto& call = ir.function_calls[function_call];
     // get function definition
     std::string& name = call.identifier;
-    auto& id = get_identifier_definition(cur_scope, name, exp_ind);
+    auto& id = get_identifier_definition(cur_scope, name, exp_ind, array_call_container_arg);
     if (id.type.type != types::FUNCTION_TYPE) {
         throw std::runtime_error(name + " is not a function");
     }
     id.function_call_references.push_back(function_call);
     auto& overloads = id.type.function_info;
+    int indirect_match = -1;
     for (auto& overload : overloads) {
         function_detail& fd = ir.function_info[overload];
         if (fd.parameter_list.size() == call.args.size()) {
             // potential match
             bool matched = true;
             for (size_t i = 0; i < call.args.size(); i++) {
-                full_type t = evaluate_expression(cur_scope, ir.expressions[call.args[i]], call.args[i]);
+                full_type t = evaluate_expression(cur_scope, ir.expressions[call.args[i]], call.args[i], array_call_container_arg);
                 auto& id = fd.body->identifiers[fd.parameter_list[i]];
-                if (!t.is_assignable_to(id.type)) {
+                if (t != id.type) {
+                    if (t.is_assignable_to(id.type)) {
+                        indirect_match = overload;
+                    }
                     matched = false;
                     break;
                 }
@@ -198,14 +202,36 @@ full_type validate_function_call(identifier_scopes* cur_scope, int function_call
             return fd.return_type;
         }
     }
+    if (indirect_match > -1) {
+        function_detail& fd = ir.function_info[indirect_match];
+        if (function_calls_set.count(fd.body)) {
+            throw std::runtime_error("(indirect) recursion requires explicitly stated return type");
+        }
+        function_calls_set.insert(fd.body);
+        // finally return type
+        // if return type is unknown have to check whole function and go through it following order vector
+        // then mark as checked to not double check later on
+        if (fd.return_type.type == types::UNKNOWN_TYPE) {
+            // this also sets the return type of the function
+            check_function_body(fd.body);
+            if (fd.return_type.type == types::UNKNOWN_TYPE) {
+                fd.return_type = {types::VOID_TYPE};
+            }
+        }
+        if (!ir.has_arrays && fd.return_type.type == types::ARRAY_TYPE) {
+            ir.has_arrays = true;
+        }
+        function_calls_set.erase(fd.body);
+        return fd.return_type;
+    }
     throw std::runtime_error("no matching overload found");
 }
 
-full_type validate_array_access(identifier_scopes* cur_scope, int array_access, int exp_ind) {
+full_type validate_array_access(identifier_scopes* cur_scope, int array_access, int exp_ind, full_type array_call_container_arg) {
     auto& access = cur_scope->get_ir()->array_accesses[array_access];
     // get definition of identifier
     std::string& name = access.identifier;
-    auto& id = get_identifier_definition(cur_scope, name, exp_ind);
+    auto& id = get_identifier_definition(cur_scope, name, exp_ind, array_call_container_arg);
     if (id.type.type != types::ARRAY_TYPE && id.type.type != types::STRING_TYPE) {
         throw std::runtime_error(name + " is not an array nor a string");
     }
@@ -214,7 +240,8 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access, 
     // if the identifier is a string
     if (id.type.type == types::STRING_TYPE) {
         if (access.args.size() == 1 &&
-            evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[access.args[0]], access.args[0]).type == types::INT_TYPE) {
+            evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[access.args[0]], access.args[0], array_call_container_arg).type ==
+                types::INT_TYPE) {
             return {types::STRING_TYPE};
         } else {
             throw std::runtime_error("invalid array access");
@@ -225,7 +252,7 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access, 
         throw std::runtime_error("invalid array access");
     }
     for (const size_t& arg : access.args) {
-        if (evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[arg], arg).type != types::INT_TYPE) {
+        if (evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[arg], arg, array_call_container_arg).type != types::INT_TYPE) {
             throw std::runtime_error("array indexes must be integers");
         }
         dimension--;
@@ -241,14 +268,14 @@ full_type validate_array_access(identifier_scopes* cur_scope, int array_access, 
     return {types::STRING_TYPE};
 }
 
-full_type validate_list(identifier_scopes* cur_scope, int list_index) {
+full_type validate_list(identifier_scopes* cur_scope, int list_index, full_type array_call_container_arg) {
     auto& list = cur_scope->get_ir()->lists[list_index];
     if (list.args.size() == 0) {
         // unknown array type, assignable to any kind of array
-        return {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 0};
+        return {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1};
     }
     if (list.args.size() == 1) {
-        full_type t = evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[0]], list.args[0]);
+        full_type t = evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[0]], list.args[0], array_call_container_arg);
         if (t.type == types::ARRAY_TYPE) {
             return {types::ARRAY_TYPE, t.array_type, t.dimension + 1};
         } else if (t.type == types::BOOL_TYPE || t.type == types::DOUBLE_TYPE || t.type == types::INT_TYPE || t.type == types::STRING_TYPE) {
@@ -257,9 +284,11 @@ full_type validate_list(identifier_scopes* cur_scope, int list_index) {
             throw std::runtime_error("unexpected type");
         }
     }
-    const full_type& expected_type = evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[0]], list.args[0]);
+    const full_type& expected_type =
+        evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[0]], list.args[0], array_call_container_arg);
     for (size_t i = 1; i < list.args.size(); i++) {
-        if (!evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[i]], list.args[i]).is_assignable_to(expected_type)) {
+        if (!evaluate_expression(cur_scope, cur_scope->get_ir()->expressions[list.args[i]], list.args[i], array_call_container_arg)
+                 .is_assignable_to(expected_type)) {
             throw std::runtime_error("array types do not match");
         }
     }
@@ -278,13 +307,16 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
         return;
     }
     if (id.type.type == types::UNKNOWN_TYPE) {
-        id.type = evaluate_expression(cur_scope, ir.expressions[id.initializing_expression], id.initializing_expression);
+        id.type = evaluate_expression(cur_scope, ir.expressions[id.initializing_expression], id.initializing_expression, id.type);
         if (id.type.type == types::VOID_TYPE || id.type.type == types::FUNCTION_TYPE) {
             throw std::runtime_error("expression not assignable to identifier");
         }
     }
-    if (!id.type.is_assignable_to(evaluate_expression(cur_scope, ir.expressions[id.initializing_expression], id.initializing_expression))) {
+    if (!id.type.is_assignable_to(evaluate_expression(cur_scope, ir.expressions[id.initializing_expression], id.initializing_expression, id.type))) {
         throw std::runtime_error("expression not assignable to identifier");
+    }
+    if (id.type.type == types::ARRAY_TYPE && id.type.array_type == types::UNKNOWN_TYPE) {
+        throw std::runtime_error("array type must be set");
     }
     if (!ir.has_arrays && id.type.type == types::ARRAY_TYPE) {
         ir.has_arrays = true;
@@ -476,8 +508,8 @@ void handle_assignment(identifier_scopes* scope, std::string& name, int index, i
     if (order_ind >= 0) {
         id.order_references.push_back({scope, order_ind});
     }
-    if (!evaluate_expression(scope, scope->assignments[name][index].first, -1)
-             .is_assignable_to(evaluate_expression(scope, ir.expressions[ind], ind))) {
+    full_type type_of_assignee = evaluate_expression(scope, scope->assignments[name][index].first, -1);
+    if (!type_of_assignee.is_assignable_to(evaluate_expression(scope, ir.expressions[ind], ind, type_of_assignee))) {
         throw std::runtime_error("expression is not assignable to identifier");
     }
 }
