@@ -172,7 +172,7 @@ void rename_identifiers(identifier_scopes& scope) {
             continue;
         }
         size_t references_besides_definition = 0;
-        if (id.initialized_with_definition) {
+        if (id.initializing_expression > -1) {
             references_besides_definition = includes_function_call(ir.expressions[id.initializing_expression]) ? 1 : 0;
         }
         std::string& new_name = get_next_identifier_name();

@@ -197,7 +197,7 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
 std::string generate_definition(identifier_scopes* cur_scope, const std::string& name, identifier_detail& id) {
     static auto& ir = *cur_scope->get_ir();
     std::string result = cur_scope->level == 0 ? name : data_type_to_string(id.type) + ' ' + name;
-    if (id.initialized_with_definition) {
+    if (id.initializing_expression > -1) {
         result += '=' + generate_expression(ir, ir.expressions[id.initializing_expression], name);
     } else if (cur_scope->level == 0) {
         return "";

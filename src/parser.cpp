@@ -433,7 +433,7 @@ bool while_statement() {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
                     std::pair<bool, identifier_scopes*> p;
-                    if ((p = body()).first) {
+                    if (tmp_exp_tree.accept_expressions() && (p = body()).first) {
                         ir.while_statements.push_back({condition, p.second});
                         // leaving while loop, set thanks_flag to previous value
                         tmp_exp_tree.thanks_flag = prev_was_thanks;
@@ -509,19 +509,19 @@ bool definition_or_definition_and_assignment() {
                     tokens.next();
                     if (partial_assignment()) {
                         // definition and assignment
-                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)tmp_exp_tree.last_exp_index(), true});
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)tmp_exp_tree.last_exp_index()});
                         // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                         return true;
                     } else {
                         tokens.previous();
-                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1, false});
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, -1});
                         // current_scope->identifiers[identifier_name] = {{}, -1, false};
                         return true;
                     }
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)tmp_exp_tree.last_exp_index(), true});
+                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)tmp_exp_tree.last_exp_index()});
                 // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
                 return true;
             }
@@ -735,7 +735,7 @@ std::pair<bool, size_t> if_structure() {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
                     std::pair<bool, identifier_scopes*> p;
-                    if ((p = body()).first) {
+                    if (tmp_exp_tree.accept_expressions() && (p = body()).first) {
                         ir.if_statements.push_back({condition, p.second});
                         size_t val = ir.if_statements.size() - 1;
                         tokens.next();
@@ -909,7 +909,7 @@ bool function_statement() {
                             tokens.next();
                             if ((p = body()).first) {
                                 ir.function_info.push_back({return_type, {}, tmp_exp_tree.thanks_flag, p.second});
-                                tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true},
+                                tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
                                                                          ir.function_info.size() - 1);
                                 if (tmp_exp_tree.accept_expressions()) {
                                     current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
@@ -921,7 +921,7 @@ bool function_statement() {
                         }
                     } else if ((p = body()).first) {
                         ir.function_info.push_back({{}, {}, tmp_exp_tree.thanks_flag, p.second});
-                        tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true},
+                        tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
                                                                  ir.function_info.size() - 1);
                         if (tmp_exp_tree.accept_expressions()) {
                             current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
@@ -943,7 +943,7 @@ bool function_statement() {
                             full_type type = full_type::to_type(tokens.current().value);
                             // since it's a parameter it's always marked as "initialized_with_definition"
                             tmp_exp_tree.add_identifier_to_cur_scope(identifier_name,
-                                                                     {type, -1, true, true, true, (int)params.size(), (int)function_info_ind});
+                                                                     {type, -1, true, true, (int)params.size(), (int)function_info_ind});
                             params.push_back(identifier_name);
                             tokens.next();
                             while (true) {
@@ -958,7 +958,7 @@ bool function_statement() {
                                                 full_type type = full_type::to_type(tokens.current().value);
                                                 // since it's a parameter it's always marked as "initialized_with_defnition"
                                                 tmp_exp_tree.add_identifier_to_cur_scope(
-                                                    identifier_name, {type, -1, true, true, true, (int)params.size(), (int)function_info_ind});
+                                                    identifier_name, {type, -1, true, true, (int)params.size(), (int)function_info_ind});
                                                 params.push_back(identifier_name);
                                                 tokens.next();
                                                 continue;
@@ -982,8 +982,8 @@ bool function_statement() {
                                                                                current_scope};
                                         current_scope = current_scope->upper_scope();
                                         went_out_of_scope = true;
-                                        tmp_exp_tree.add_identifier_to_cur_scope(
-                                            function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1, true}, function_info_ind);
+                                        tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
+                                                                                 function_info_ind);
                                         if (tmp_exp_tree.accept_expressions()) {
                                             current_scope->order.push_back({function_info_ind, statement_type::FUNCTION, function_name});
                                             // leaving function, set thanks_function_flag to previous value

@@ -11,7 +11,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["message"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["message"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["message"].parameter_index = 0;
                 cur_scope->identifiers["message"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
@@ -20,7 +20,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("print");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "read_line") {
         // reads a line from stdin
@@ -33,7 +33,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("read_line");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "size") {
         // obtain the size of a container
@@ -43,7 +43,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["container"] = {ts[i], -1, true, true, true};
+                cur_scope->identifiers["container"] = {ts[i], -1, true, true};
                 cur_scope->identifiers["container"].parameter_index = 0;
                 cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
@@ -52,7 +52,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("size");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "to_string") {
         // convert a number or boolean value to a string
@@ -62,7 +62,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
@@ -71,7 +71,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("to_string");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "to_int") {
         // convert a bool, double or string to an int
@@ -81,7 +81,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
@@ -90,7 +90,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("to_int");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "to_double") {
         // convert a bool, int or string to a double
@@ -100,7 +100,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true, true};
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
                 fi[i] = ir.function_info.size();
@@ -109,7 +109,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("to_double");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         return id;
     } else if (id_name == "array") {
         // create an array with a pre-determined size
@@ -120,17 +120,17 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         static identifier_scopes* last_scope;
         if (!has_been_added_to_ir) {
             auto* cur_scope = ir.scopes.new_scope();
-            cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true, true};
+            cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
             cur_scope->identifiers["size"].parameter_index = 0;
             cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
             fi[0] = ir.function_info.size();
             ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, {"size"}, true, cur_scope});
             for (size_t i = 0; i < ts.size(); i++) {
                 auto* cur_scope = ir.scopes.new_scope();
-                cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true, true};
+                cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
                 cur_scope->identifiers["size"].parameter_index = 0;
                 cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
-                cur_scope->identifiers["container"] = {ts[i], -1, true, true, true};
+                cur_scope->identifiers["container"] = {ts[i], -1, true, true};
                 cur_scope->identifiers["container"].parameter_index = 1;
                 cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
                 fi[i + 1] = ir.function_info.size();
@@ -144,7 +144,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             has_been_added_to_ir = true;
             ir.used_library_functions.insert("array");
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, true, true, true};
+        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, true, true};
         if (id.type.function_info.size() > 6) {
             id.type.function_info.pop_back();
         }

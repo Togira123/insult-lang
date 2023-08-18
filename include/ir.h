@@ -140,8 +140,6 @@ struct identifier_detail {
     full_type type;
     // references the expression that initialized this identifier. Negative if not applicable yet
     int initializing_expression;
-    // whether the variable has been initialized during definition
-    bool initialized_with_definition;
     // whether this identifier is constant or not, meaning whether it keeps its initial value or changes it
     // used to optimize code afterwards
     bool is_constant = true;

@@ -303,7 +303,7 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
     if (order_ind >= 0) {
         id.order_references.push_back({cur_scope, order_ind});
     }
-    if (!id.initialized_with_definition) {
+    if (id.initializing_expression < 0) {
         return;
     }
     if (id.type.type == types::UNKNOWN_TYPE) {
