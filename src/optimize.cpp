@@ -152,12 +152,26 @@ void rename_identifier_in_exp(expression_tree& root, const std::string& old_name
     }
 }
 
-bool includes_function_call(expression_tree& root) {
+bool includes_function_call(intermediate_representation& ir, expression_tree& root) {
     if (root.type == node_type::OPERATOR) {
         if (root.left == nullptr) {
-            return includes_function_call(*root.right);
+            return includes_function_call(ir, *root.right);
         }
-        return includes_function_call(*root.right) || includes_function_call(*root.left);
+        return includes_function_call(ir, *root.right) || includes_function_call(ir, *root.left);
+    } else if (root.type == node_type::LIST) {
+        auto& list = ir.lists[root.args_list_index];
+        for (const size_t& arg : list.args) {
+            if (includes_function_call(ir, ir.expressions[arg])) {
+                return true;
+            }
+        }
+    } else if (root.type == node_type::ARRAY_ACCESS) {
+        auto& access = ir.lists[root.args_array_access_index];
+        for (const size_t& arg : access.args) {
+            if (includes_function_call(ir, ir.expressions[arg])) {
+                return true;
+            }
+        }
     }
     return root.type == node_type::FUNCTION_CALL;
 }
@@ -173,7 +187,7 @@ void rename_identifiers(identifier_scopes& scope) {
         }
         size_t references_besides_definition = 0;
         if (id.initializing_expression > -1) {
-            references_besides_definition = includes_function_call(ir.expressions[id.initializing_expression]) ? 1 : 0;
+            references_besides_definition = includes_function_call(ir, ir.expressions[id.initializing_expression]) ? 1 : 0;
         }
         std::string& new_name = get_next_identifier_name();
         for (int exp : id.references) {

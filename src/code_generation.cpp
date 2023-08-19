@@ -36,7 +36,7 @@ std::string data_type_to_string(const full_type& type) {
 
 std::string generate_library_functions(intermediate_representation& ir) {
     std::string result = "";
-    for (const std::string& func : ir.used_library_functions) {
+    for (auto& [func, _] : ir.library_func_scopes.identifiers) {
         if (func == "print") {
             result += generate_print();
         } else if (func == "read_line") {
@@ -124,8 +124,8 @@ std::string generate_array_access(intermediate_representation& ir, int array_acc
 
 std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
     auto& call = ir.function_calls[function_call_index];
-    std::string result = (call.identifier == "to_string" && ir.used_library_functions.count("to_string") ? "std::" : "") + call.identifier;
-    if (call.identifier == "array" && ir.used_library_functions.count("array")) {
+    std::string result = (call.identifier == "to_string" && ir.library_func_scopes.identifiers.count("to_string") ? "std::" : "") + call.identifier;
+    if (call.identifier == "array" && ir.library_func_scopes.identifiers.count("array")) {
         full_type ft = call.type;
         if (ft.dimension == 1) {
             ft = {ft.array_type};
@@ -139,9 +139,6 @@ std::string generate_function_call(intermediate_representation& ir, int function
         result += generate_expression(ir, ir.expressions[call.args[0]]);
         for (size_t i = 1; i < call.args.size(); i++) {
             result += ',' + generate_expression(ir, ir.expressions[call.args[i]]);
-        }
-        if (call.identifier == "array" && ir.used_library_functions.count("array") && ir.expressions[call.args[1]].type == node_type::INT) {
-            result += "LL";
         }
     }
     return result + ')';
@@ -172,6 +169,8 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
             return generate_list(ir, root.args_list_index);
         case node_type::STRING:
             return "std::string(\"" + root.node + "\")";
+        case node_type::INT:
+            return root.node + "LL";
         default:
             return root.node;
         }

@@ -4,7 +4,7 @@
 
 const std::unordered_set<std::string> library_functions = {"print", "read_line", "size", "to_string", "to_int", "to_double", "array"};
 
-identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type array_call_container_arg = {});
+identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type type_assigned_to = {});
 
 std::string generate_print();
 

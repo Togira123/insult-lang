@@ -76,6 +76,11 @@ struct full_type {
                                               : type == other.type;
     }
     bool operator!=(const full_type& other) { return !(*this == other); }
+    bool operator<(const full_type& other) const {
+        return type == other.type && type == types::ARRAY_TYPE
+                   ? array_type == other.array_type ? dimension < other.dimension : array_type < other.array_type
+                   : type < other.type;
+    }
     //  only converts bool, double, int and string
     static full_type to_type(const node_type node) {
         switch (node) {
@@ -103,7 +108,8 @@ struct full_type {
         case types::ARRAY_TYPE:
             return other.type == types::ARRAY_TYPE &&
                    (array_type == other.array_type || (array_type == types::UNKNOWN_TYPE || other.array_type == types::UNKNOWN_TYPE)) &&
-                   (dimension >= other.dimension || dimension == -1 || other.dimension == -1);
+                   ((other.array_type == types::UNKNOWN_TYPE ? dimension >= other.dimension : dimension == other.dimension) || dimension == -1 ||
+                    other.dimension == -1);
         default:
             return false;
         }
@@ -149,7 +155,7 @@ struct identifier_detail {
     // index to function_info of the function where this parameter belongs
     int function_info_ind = -1;
     // includes indexes of expression_tree where this variable is used
-    std::vector<int> references = {};
+    std::unordered_set<int> references = {};
     // references to order
     std::vector<std::pair<identifier_scopes*, int>> order_references = {};
     std::unordered_set<identifier_scopes*> assignment_references = {};
@@ -199,7 +205,6 @@ struct expression_tree {
             right = std::make_unique<expression_tree>(*other.right);
         }
     }
-    // TODO: update this to return true/false based on the expression after it is evaluated
     bool operator==(const expression_tree& other) {
         return node == other.node && type == other.type && *left == *other.left && *right == *other.right;
     }
@@ -269,6 +274,7 @@ struct args_list {
     std::vector<size_t> args;
     std::string identifier;
     full_type type = {};
+    int matched_overload = -1;
 };
 
 struct if_statement_struct {
@@ -332,9 +338,11 @@ struct intermediate_representation {
     bool has_arrays = false;
     bool has_fast_exponent = false;
     bool has_add_vectors = false;
-    std::unordered_set<std::string> used_library_functions;
     // filled after renaming to prevent clashes with two identifiers named the same
     std::unordered_map<std::string, identifier_scopes*> defining_scope_of_identifier;
+    // used to store types of top level expressions
+    std::unordered_map<int, full_type> top_level_expression_type;
+    identifier_scopes library_func_scopes = {this};
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},

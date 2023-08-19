@@ -1,8 +1,9 @@
 #include "../../include/lib/library.h"
 #include "../../include/ir.h"
+#include <set>
 #include <vector>
 
-identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type array_call_container_arg) {
+identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type type_assigned_to) {
     if (id_name == "print") {
         // print a value to stdout
         static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::INT_TYPE, types::STRING_TYPE};
@@ -10,7 +11,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["message"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["message"].parameter_index = 0;
                 cur_scope->identifiers["message"].function_info_ind = ir.function_info.size();
@@ -18,31 +19,29 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::VOID_TYPE}, {"message"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("print");
+            ir.library_func_scopes.identifiers["print"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["print"];
     } else if (id_name == "read_line") {
         // reads a line from stdin
         static bool has_been_added_to_ir = false;
         static std::vector<size_t> fi(1);
         if (!has_been_added_to_ir) {
-            auto* cur_scope = ir.scopes.new_scope();
+            auto* cur_scope = ir.library_func_scopes.new_scope();
             fi[0] = ir.function_info.size();
             ir.function_info.push_back({{types::STRING_TYPE}, {}, true, cur_scope});
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("read_line");
+            ir.library_func_scopes.identifiers["read_line"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["read_line"];
     } else if (id_name == "size") {
         // obtain the size of a container
-        static const std::vector<full_type> ts = {{types::STRING_TYPE}, {types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}};
+        static const std::vector<full_type> ts = {{types::STRING_TYPE}, {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}};
         static bool has_been_added_to_ir = false;
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["container"] = {ts[i], -1, true, true};
                 cur_scope->identifiers["container"].parameter_index = 0;
                 cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
@@ -50,10 +49,9 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::INT_TYPE}, {"container"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("size");
+            ir.library_func_scopes.identifiers["size"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["size"];
     } else if (id_name == "to_string") {
         // convert a number or boolean value to a string
         static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::INT_TYPE};
@@ -61,7 +59,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
@@ -69,10 +67,9 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::STRING_TYPE}, {"value"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("to_string");
+            ir.library_func_scopes.identifiers["to_string"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["to_string"];
     } else if (id_name == "to_int") {
         // convert a bool, double or string to an int
         static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::STRING_TYPE};
@@ -80,7 +77,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
@@ -88,10 +85,9 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::INT_TYPE}, {"value"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("to_int");
+            ir.library_func_scopes.identifiers["to_int"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["to_int"];
     } else if (id_name == "to_double") {
         // convert a bool, int or string to a double
         static const std::vector<types> ts = {types::BOOL_TYPE, types::INT_TYPE, types::STRING_TYPE};
@@ -99,7 +95,7 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
         static std::vector<size_t> fi(ts.size());
         if (!has_been_added_to_ir) {
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
                 cur_scope->identifiers["value"].parameter_index = 0;
                 cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
@@ -107,26 +103,25 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 ir.function_info.push_back({{types::DOUBLE_TYPE}, {"value"}, true, cur_scope});
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("to_double");
+            ir.library_func_scopes.identifiers["to_double"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
-        return id;
+        return ir.library_func_scopes.identifiers["to_double"];
     } else if (id_name == "array") {
         // create an array with a pre-determined size
+        static std::set<full_type> added_overloads;
         static const std::vector<full_type> ts = {
-            {types::ARRAY_TYPE, types::UNKNOWN_TYPE, -1}, {types::BOOL_TYPE}, {types::DOUBLE_TYPE}, {types::INT_TYPE}, {types::STRING_TYPE}};
+            {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, {types::BOOL_TYPE}, {types::DOUBLE_TYPE}, {types::INT_TYPE}, {types::STRING_TYPE}};
         static bool has_been_added_to_ir = false;
-        static std::vector<size_t> fi(ts.size());
-        static identifier_scopes* last_scope;
+        static std::vector<size_t> fi(ts.size() + 1);
         if (!has_been_added_to_ir) {
-            auto* cur_scope = ir.scopes.new_scope();
+            auto* cur_scope = ir.library_func_scopes.new_scope();
             cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
             cur_scope->identifiers["size"].parameter_index = 0;
             cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
             fi[0] = ir.function_info.size();
             ir.function_info.push_back({{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, {"size"}, true, cur_scope});
             for (size_t i = 0; i < ts.size(); i++) {
-                auto* cur_scope = ir.scopes.new_scope();
+                auto* cur_scope = ir.library_func_scopes.new_scope();
                 cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
                 cur_scope->identifiers["size"].parameter_index = 0;
                 cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
@@ -139,22 +134,34 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
                 } else {
                     ir.function_info.push_back({{types::ARRAY_TYPE, ts[i].type, 1}, {"size", "container"}, true, cur_scope});
                 }
-                last_scope = cur_scope;
             }
             has_been_added_to_ir = true;
-            ir.used_library_functions.insert("array");
+            ir.library_func_scopes.identifiers["array"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, true, true};
         }
-        static identifier_detail id = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, true, true};
-        if (id.type.function_info.size() > 6) {
-            id.type.function_info.pop_back();
+        if (type_assigned_to.type == types::ARRAY_TYPE && !added_overloads.count(type_assigned_to)) {
+            auto* cur_scope = ir.library_func_scopes.new_scope();
+            cur_scope->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
+            cur_scope->identifiers["size"].parameter_index = 0;
+            cur_scope->identifiers["size"].function_info_ind = ir.function_info.size();
+            ir.library_func_scopes.identifiers["array"].type.function_info.push_back(ir.function_info.size());
+            ir.function_info.push_back({type_assigned_to, {"size", "container"}, true, cur_scope});
+
+            full_type container_arg_type = --type_assigned_to.dimension == 0 ? full_type{type_assigned_to.array_type} : type_assigned_to;
+            type_assigned_to.dimension++;
+            auto* cur_scope2 = ir.library_func_scopes.new_scope();
+            cur_scope2->identifiers["size"] = {{types::INT_TYPE}, -1, true, true};
+            cur_scope2->identifiers["size"].parameter_index = 0;
+            cur_scope2->identifiers["size"].function_info_ind = ir.function_info.size();
+            cur_scope2->identifiers["container"] = {container_arg_type, -1, true, true};
+            cur_scope2->identifiers["container"].parameter_index = 1;
+            cur_scope2->identifiers["container"].function_info_ind = ir.function_info.size();
+            ir.library_func_scopes.identifiers["array"].type.function_info.push_back(ir.function_info.size());
+            ir.function_info.push_back({type_assigned_to, {"size", "container"}, true, cur_scope2});
+
+            added_overloads.insert(type_assigned_to);
+            return ir.library_func_scopes.identifiers["array"];
         }
-        if (array_call_container_arg.type == types::ARRAY_TYPE) {
-            array_call_container_arg.dimension++;
-            id.type.function_info.push_back(ir.function_info.size());
-            ir.function_info.push_back({array_call_container_arg, {"size", "container"}, true, last_scope});
-            return id;
-        }
-        return id;
+        return ir.library_func_scopes.identifiers["array"];
     } else {
         throw std::runtime_error("no definition found for " + id_name);
     }
