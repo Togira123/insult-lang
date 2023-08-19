@@ -115,11 +115,11 @@ std::string generate_add_vectors_function() {
 
 std::string generate_array_access(intermediate_representation& ir, int array_access_index) {
     auto& access = ir.array_accesses[array_access_index];
-    std::string result = access.identifier;
+    std::string result = (access.type.type == types::STRING_TYPE ? "std::string(1," : "") + access.identifier;
     for (size_t& arg : access.args) {
         result += '[' + generate_expression(ir, ir.expressions[arg]) + ']';
     }
-    return result;
+    return result + (access.type.type == types::STRING_TYPE ? ")" : "");
 }
 
 std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
@@ -218,13 +218,13 @@ std::string generate_for_loop(for_statement_struct& for_statement) {
                 generate_definition(for_statement.body, for_statement.init_statement, for_statement.body->identifiers[for_statement.init_statement]);
         } else {
             result +=
-                generate_assignment(ir, for_statement.body->assignments[for_statement.init_statement][for_statement.init_index].first,
+                generate_assignment(ir, ir.expressions[for_statement.body->assignments[for_statement.init_statement][for_statement.init_index].first],
                                     ir.expressions[for_statement.body->assignments[for_statement.init_statement][for_statement.init_index].second]);
         }
     }
     result += ';' + generate_expression(ir, ir.expressions[for_statement.condition]) + ';';
     if (for_statement.after != "") {
-        result += generate_assignment(ir, for_statement.body->assignments[for_statement.after][for_statement.after_index].first,
+        result += generate_assignment(ir, ir.expressions[for_statement.body->assignments[for_statement.after][for_statement.after_index].first],
                                       ir.expressions[for_statement.body->assignments[for_statement.after][for_statement.after_index].second]);
     }
     result += "){\n";
@@ -327,7 +327,7 @@ std::string generate_statement(identifier_scopes* cur, size_t order_index) {
         return "";
     case statement_type::ASSIGNMENT:
         return offset +
-               generate_assignment(ir, cur->assignments[cur_statement.identifier_name][cur_statement.index].first,
+               generate_assignment(ir, ir.expressions[cur->assignments[cur_statement.identifier_name][cur_statement.index].first],
                                    ir.expressions[cur->assignments[cur_statement.identifier_name][cur_statement.index].second]) +
                ";\n";
     case statement_type::INITIALIZATION: {

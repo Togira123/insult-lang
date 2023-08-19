@@ -225,9 +225,9 @@ struct identifier_scopes {
     std::unordered_map<std::string, identifier_detail> identifiers;
     // all assignments happening in the current scope (excluding definitions that are assignments too)
     // key of the map is the identifier being assigned to something
-    // value of the map is a pair where the first value is an expression tree which describes the identifier used (might be array access), the second
-    // value is the index of the expression the identifier is being assigned
-    std::unordered_map<std::string, std::vector<std::pair<expression_tree, int>>> assignments;
+    // value of the map is a pair where the first value is the index of an expression tree which describes the identifier used (might be array
+    // access), the second value is the index of the expression the identifier is being assigned
+    std::unordered_map<std::string, std::vector<std::pair<int, int>>> assignments;
     identifier_scopes(intermediate_representation* ir_pointer, int l = 0, std::unordered_map<std::string, identifier_detail> i = {})
         : level(l), identifiers(i), upper(nullptr), lower({}), index(0), ir(ir_pointer){};
     // used to create a new scope just below the level of this scope

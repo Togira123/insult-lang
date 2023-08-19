@@ -577,7 +577,8 @@ void handle_assignment(identifier_scopes* scope, std::string& name, int index, i
     if (order_ind >= 0) {
         id.order_references.push_back({scope, order_ind});
     }
-    full_type type_of_assignee = evaluate_expression(scope, scope->assignments[name][index].first, -1);
+    full_type type_of_assignee =
+        evaluate_expression(scope, ir.expressions[scope->assignments[name][index].first], scope->assignments[name][index].first);
     if (!type_of_assignee.is_assignable_to(evaluate_expression(scope, ir.expressions[ind], ind, type_of_assignee))) {
         throw std::runtime_error("expression is not assignable to identifier");
     }

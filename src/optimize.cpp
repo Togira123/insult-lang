@@ -128,11 +128,38 @@ std::string& get_next_identifier_name() {
     return last;
 }
 
-void rename_identifier_in_exp(expression_tree& root, const std::string& old_name, const std::string& new_name) {
+void rename_identifier_in_exp(intermediate_representation& ir, expression_tree& root, const std::string& old_name, const std::string& new_name) {
     if (root.type != node_type::OPERATOR) {
         switch (root.type) {
-        case node_type::ARRAY_ACCESS:
-        case node_type::FUNCTION_CALL:
+        case node_type::ARRAY_ACCESS: {
+            auto& access = ir.array_accesses[root.args_array_access_index];
+            for (const size_t& arg : access.args) {
+                rename_identifier_in_exp(ir, ir.expressions[arg], old_name, new_name);
+            }
+            if (!root.been_renamed && root.node == old_name) {
+                root.node = new_name;
+                root.been_renamed = true;
+            }
+            return;
+        }
+        case node_type::FUNCTION_CALL: {
+            auto& call = ir.function_calls[root.args_function_call_index];
+            for (const size_t& arg : call.args) {
+                rename_identifier_in_exp(ir, ir.expressions[arg], old_name, new_name);
+            }
+            if (!root.been_renamed && root.node == old_name) {
+                root.node = new_name;
+                root.been_renamed = true;
+            }
+            return;
+        }
+        case node_type::LIST: {
+            auto& list = ir.lists[root.args_list_index];
+            for (const size_t& arg : list.args) {
+                rename_identifier_in_exp(ir, ir.expressions[arg], old_name, new_name);
+            }
+            return;
+        }
         case node_type::IDENTIFIER:
             if (!root.been_renamed) {
                 if (root.node == old_name) {
@@ -145,9 +172,9 @@ void rename_identifier_in_exp(expression_tree& root, const std::string& old_name
             return;
         }
     } else {
-        rename_identifier_in_exp(*root.right, old_name, new_name);
+        rename_identifier_in_exp(ir, *root.right, old_name, new_name);
         if (root.left != nullptr) {
-            rename_identifier_in_exp(*root.left, old_name, new_name);
+            rename_identifier_in_exp(ir, *root.left, old_name, new_name);
         }
     }
 }
@@ -178,7 +205,7 @@ bool includes_function_call(intermediate_representation& ir, expression_tree& ro
 
 void rename_identifiers(identifier_scopes& scope) {
     static auto& ir = *scope.get_ir();
-    static std::unordered_map<identifier_scopes*, std::unordered_map<std::string, std::vector<std::pair<expression_tree, int>>>> new_names_assignment;
+    static std::unordered_map<identifier_scopes*, std::unordered_map<std::string, std::vector<std::pair<int, int>>>> new_names_assignment;
     // for each identifier rename it and also rename all references
     std::unordered_map<std::string, identifier_detail> new_names;
     for (auto& [name, id] : scope.identifiers) {
@@ -191,7 +218,7 @@ void rename_identifiers(identifier_scopes& scope) {
         }
         std::string& new_name = get_next_identifier_name();
         for (int exp : id.references) {
-            rename_identifier_in_exp(ir.expressions[exp], name, new_name);
+            rename_identifier_in_exp(ir, ir.expressions[exp], name, new_name);
         }
         references_besides_definition += id.references.size();
         for (auto& [order_scope, order_ind] : id.order_references) {
@@ -204,9 +231,9 @@ void rename_identifiers(identifier_scopes& scope) {
         for (identifier_scopes* s : id.assignment_references) {
             new_names_assignment[s][new_name] = std::move(s->assignments[name]);
             for (auto& v : new_names_assignment[s][new_name]) {
-                if (!v.first.been_renamed) {
-                    v.first.node = new_name;
-                    v.first.been_renamed = true;
+                if (!ir.expressions[v.first].been_renamed) {
+                    ir.expressions[v.first].node = new_name;
+                    ir.expressions[v.first].been_renamed = true;
                 }
             }
         }

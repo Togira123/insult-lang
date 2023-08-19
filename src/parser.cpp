@@ -481,8 +481,10 @@ bool assignment() {
             tree.args_array_access_index = p.second;
         }
         tokens.next();
+        tmp_exp_tree.add_expression_to_ir(tree, true);
+        size_t ind = tmp_exp_tree.last_exp_index();
         if (partial_assignment()) {
-            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index(), tree);
+            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index(), ind);
             // current_scope->assignments[identifier_name].push_back(tmp_exp_tree.last_exp_index());
             return true;
         }
@@ -1222,9 +1224,10 @@ bool program() {
 
 int main(int argc, char* argv[]) {
     std::string tmp_file = "";
+    std::srand(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     do {
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        tmp_file = "inslt_gen_" + std::to_string(ms) + ".cpp";
+        tmp_file = "inslt_gen_" + std::to_string(ms) + '_' + std::to_string(rand()) + ".cpp";
     } while (std::filesystem::exists(tmp_file));
     std::ofstream outstream(tmp_file);
     std::string output_file = "a.out";
