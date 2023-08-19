@@ -1,0 +1,61 @@
+// task is to go from top left to bottom right with least cost
+/*
+input:
+3 3
+1 2 3
+4 8 2
+1 5 3
+
+expected output: 11 (path: 1-2-3-2-3)
+*/
+
+/*
+larger input:
+5 5
+1 2 3 4 5
+4 8 2 6 7
+1 5 3 4 9
+3 4 5 6 7
+11 2 3 4 5
+
+expected output: 27 (path: 1-4-1-3-4-2-3-4-5)
+*/
+
+def s = read_line() please
+def n = to_int(s[0]) please
+def m = to_int(s[2]) please
+def grid: int[][] = array(n, array(m, 0)) please
+for (def i = 0; i < n; i = i + 1) {
+    def s = read_line() please
+    def offset = 0 please
+    for (def j = 0; j < m; j = j + 1) {
+        def tmp = "" please
+        while (s[j * 2 + offset] >= "0" && s[j * 2 + offset] <= "9") {
+            tmp = tmp + s[j * 2 + offset] please
+            offset = offset + 1 please
+        }
+        offset = offset - 1 please
+        grid[i][j] = to_int(tmp) please
+    }
+}
+def memo: int[][] = array(n, array(m, 0)) please
+for (def i = 0; i < n; i = i + 1) {
+    for (def j = 0; j < n; j = j + 1) {
+        if (i == 0) {
+            thanks if (j == 0) {
+                memo[0][0] = grid[0][0]
+                continue
+            }
+            memo[i][j] = memo[i][j - 1] + grid[i][j] please
+        } else if (j == 0) {
+            memo[i][j] = memo[i - 1][j] + grid[i][j] please
+        } else {
+            if (memo[i - 1][j] < memo[i][j - 1]) {
+                memo[i][j] = memo[i - 1][j] + grid[i][j] please
+            } else {
+                memo[i][j] = memo[i][j - 1] + grid[i][j] please
+            }
+        }
+    }
+}
+print(memo[n - 1][m - 1]) please
