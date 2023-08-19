@@ -242,9 +242,9 @@ std::string logical_operator(std::vector<char>& buffer, int& index, int& fence) 
 
 std::string logicalnot(std::vector<char>& buffer, int& index) { return (cur_char(buffer, index) == '!') ? "!" : ""; }
 
-std::string string_token(std::vector<char>& buffer, int& index, int& fence) {
+std::pair<bool, std::string> string_token(std::vector<char>& buffer, int& index, int& fence) {
     if (cur_char(buffer, index) != '"') {
-        return "";
+        return {false, ""};
     }
     char c = next_char(buffer, index, fence);
     std::string result = "";
@@ -259,9 +259,9 @@ std::string string_token(std::vector<char>& buffer, int& index, int& fence) {
         c = next_char(buffer, index, fence);
     }
     if (c == EOF) {
-        return "";
+        return {false, ""};
     }
-    return result;
+    return {true, result};
 }
 
 std::string identifier(std::vector<char>& buffer, int& index, int& fence) {
@@ -404,6 +404,7 @@ std::list<token>& scan_program(int argc, char* argv[]) {
     int line = 1;
     while (c != EOF) {
         std::string result;
+        std::pair<bool, std::string> str_result;
         if ((result = newline(buffer, index, fence, line)) != "") {
             token_list.push_back({token_type::NEWLINE, result});
         } else if ((result = comment(buffer, index, fence)) != "") {
@@ -420,7 +421,8 @@ std::list<token>& scan_program(int argc, char* argv[]) {
             token_list.push_back({token_type::COMPARISON_OPERATOR, result});
         } else if ((result = logicalnot(buffer, index)) != "") {
             token_list.push_back({token_type::LOGICAL_NOT, result});
-        } else if ((result = string_token(buffer, index, fence)) != "") {
+        } else if ((str_result = string_token(buffer, index, fence)).first) {
+            result = std::move(str_result.second);
             token_list.push_back({token_type::STRING, result});
         } else if ((result = identifier(buffer, index, fence)) != "") {
             if (result == "true" || result == "false") {
