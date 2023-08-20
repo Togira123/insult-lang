@@ -96,7 +96,7 @@ std::string generate_pow_function() {
 }
 
 std::string generate_add_vectors_function() {
-    return "template<typename v>std::vector<v>add_vectors(std::vector<v>& a,const std::vector<v>& b,std::vector<v>* p){\n"
+    return "template<typename v>std::vector<v>add_vectors(std::vector<v>& a,const std::vector<v>& b,void* p){\n"
            "\tif(p==&a){\n"
            "\t\ta.insert(a.end(),b.begin(),b.end());\n"
            "\t\treturn a;\n"
@@ -106,23 +106,23 @@ std::string generate_add_vectors_function() {
            "\treturn tmp;\n"
            "}\n"
 
-           "template<typename v>std::vector<v>add_vectors(const std::vector<v>& a,const std::vector<v>& b,std::vector<v>* p){\n"
+           "template<typename v>std::vector<v>add_vectors(const std::vector<v>& a,const std::vector<v>& b,void* p){\n"
            "\tstd::vector<v> tmp=a;\n"
            "\ttmp.insert(tmp.end(), b.begin(), b.end());"
            "\treturn tmp;\n"
            "}\n";
 }
 
-std::string generate_array_access(intermediate_representation& ir, int array_access_index) {
+std::string generate_array_access(intermediate_representation& ir, int array_access_index, const std::string& assignee) {
     auto& access = ir.array_accesses[array_access_index];
     std::string result = (access.type.type == types::STRING_TYPE ? "std::string(1," : "") + access.identifier;
     for (size_t& arg : access.args) {
-        result += '[' + generate_expression(ir, ir.expressions[arg]) + ']';
+        result += '[' + generate_expression(ir, ir.expressions[arg], assignee) + ']';
     }
     return result + (access.type.type == types::STRING_TYPE ? ")" : "");
 }
 
-std::string generate_function_call(intermediate_representation& ir, int function_call_index) {
+std::string generate_function_call(intermediate_representation& ir, int function_call_index, const std::string& assignee) {
     auto& call = ir.function_calls[function_call_index];
     std::string result = (call.identifier == "to_string" && ir.library_func_scopes.identifiers.count("to_string") ? "std::" : "") + call.identifier;
     if (call.identifier == "array" && ir.library_func_scopes.identifiers.count("array")) {
@@ -136,21 +136,21 @@ std::string generate_function_call(intermediate_representation& ir, int function
     }
     result += '(';
     if (call.args.size() >= 1) {
-        result += generate_expression(ir, ir.expressions[call.args[0]]);
+        result += generate_expression(ir, ir.expressions[call.args[0]], assignee);
         for (size_t i = 1; i < call.args.size(); i++) {
-            result += ',' + generate_expression(ir, ir.expressions[call.args[i]]);
+            result += ',' + generate_expression(ir, ir.expressions[call.args[i]], assignee);
         }
     }
     return result + ')';
 }
 
-std::string generate_list(intermediate_representation& ir, int list_index) {
+std::string generate_list(intermediate_representation& ir, int list_index, const std::string& assignee) {
     auto& list = ir.lists[list_index];
     std::string result = "{";
     if (list.args.size() >= 1) {
-        result += generate_expression(ir, ir.expressions[list.args[0]]);
+        result += generate_expression(ir, ir.expressions[list.args[0]], assignee);
         for (size_t i = 1; i < list.args.size(); i++) {
-            result += ',' + generate_expression(ir, ir.expressions[list.args[i]]);
+            result += ',' + generate_expression(ir, ir.expressions[list.args[i]], assignee);
         }
     }
     return result + '}';
@@ -160,13 +160,13 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
     if (root.type != node_type::OPERATOR) {
         switch (root.type) {
         case node_type::ARRAY_ACCESS:
-            return generate_array_access(ir, root.args_array_access_index);
+            return generate_array_access(ir, root.args_array_access_index, assignee);
         case node_type::FUNCTION_CALL:
-            return generate_function_call(ir, root.args_function_call_index);
+            return generate_function_call(ir, root.args_function_call_index, assignee);
         case node_type::IDENTIFIER:
             return root.node;
         case node_type::LIST:
-            return generate_list(ir, root.args_list_index);
+            return generate_list(ir, root.args_list_index, assignee);
         case node_type::STRING:
             return "std::string(\"" + root.node + "\")";
         case node_type::INT:
@@ -185,7 +185,7 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
             } else if (root.node == "#") {
                 return "a(" + left + "," + right + ")";
             } else if (root.node == "$") { // is a "+" for array types
-                return "add_vectors(" + left + "," + right + ",&" + assignee + ")";
+                return "add_vectors(" + left + "," + right + (assignee == "nullptr" ? "," : ",&") + assignee + ")";
             } else {
                 return left + root.node + right;
             }
