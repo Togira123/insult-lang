@@ -185,7 +185,13 @@ std::string generate_expression(intermediate_representation& ir, expression_tree
             } else if (root.node == "#") {
                 return "a(" + left + "," + right + ")";
             } else if (root.node == "$") { // is a "+" for array types
-                return "add_vectors(" + left + "," + right + (assignee == "nullptr" ? "," : ",&") + assignee + ")";
+                full_type ft = ir.array_addition_result[&root];
+                if (ft.dimension == 1) {
+                    ft = {ft.array_type};
+                } else {
+                    ft.dimension--;
+                }
+                return "add_vectors<" + data_type_to_string(ft) + ">(" + left + "," + right + (assignee == "nullptr" ? "," : ",&") + assignee + ")";
             } else {
                 return left + root.node + right;
             }

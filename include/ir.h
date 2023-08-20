@@ -178,6 +178,7 @@ struct expression_tree {
     int args_function_call_index = -1;
     int args_list_index = -1;
     bool been_renamed = false;
+    int index = -1;
     // std::unique_ptr<expression_tree> parent;
     expression_tree(std::string n = "", node_type t = node_type::IDENTIFIER, int ind = -1) : node(n), type(t), left(nullptr), right(nullptr) {
         switch (t) {
@@ -342,6 +343,12 @@ struct intermediate_representation {
     std::unordered_map<std::string, identifier_scopes*> defining_scope_of_identifier;
     // used to store types of top level expressions
     std::unordered_map<int, full_type> top_level_expression_type;
+    // pointer to expression_tree is safe here since the vector it's stored in isn't going to be modified
+    std::unordered_map<expression_tree*, full_type> array_addition_result;
+    // refers to top-level expression_tree so we can safely use index
+    std::unordered_set<int> array_addition_expressions;
+    // pointer to expression_tree is safe here since the vector it's stored in isn't going to be modified
+    std::unordered_map<expression_tree*, full_type> expression_tree_identifier_types;
     identifier_scopes library_func_scopes = {this};
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
