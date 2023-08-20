@@ -124,7 +124,7 @@ full_type evaluate_expression_recursive(identifier_scopes* cur_scope, expression
                 }
                 throw std::runtime_error("expected expressions to be assignable");
             } else if (root.node == "+" || root.node == "$") {
-                if (left.type != types::BOOL_TYPE && left.is_assignable_to(right)) {
+                if (left.type != types::BOOL_TYPE && (left.is_assignable_to(right) || right.is_assignable_to(left))) {
                     switch (left.type) {
                     case types::INT_TYPE:
                         return right.type == types::INT_TYPE ? full_type{types::INT_TYPE} : full_type{types::DOUBLE_TYPE};
@@ -133,7 +133,9 @@ full_type evaluate_expression_recursive(identifier_scopes* cur_scope, expression
                         // both arguments are arrays which has to be marked in order to handle them correctly when generating code
                         root.node = "$";
                         ir.array_addition_expressions.insert(exp_ind);
-                        // no break on purpose because we still have to return
+                        return left.array_type == types::UNKNOWN_TYPE
+                                   ? right.array_type == types::UNKNOWN_TYPE ? left.dimension > right.dimension ? left : right : right
+                                   : left;
                     default:
                         // left == (ARRAY_TYPE || DOUBLE_TYPE || STRING_TYPE)
                         return left;
@@ -380,8 +382,7 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
             throw std::runtime_error("expression not assignable to identifier");
         }
     }
-    auto tmp = evaluate_expression(cur_scope, id.initializing_expression, id.initializing_expression, id.type);
-    if (!id.type.is_assignable_to(tmp)) {
+    if (!id.type.is_assignable_to(evaluate_expression(cur_scope, id.initializing_expression, id.initializing_expression, id.type))) {
         throw std::runtime_error("expression not assignable to identifier");
     }
     if (id.type.type == types::ARRAY_TYPE && id.type.array_type == types::UNKNOWN_TYPE) {
