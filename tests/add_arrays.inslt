@@ -1,0 +1,18 @@
+def a: int[] = [] + [] + [] please
+
+a = a + [1] please
+a[0] = 2 please
+
+// expect 2
+print(a[0]) please
+
+def b = [] + [] + [[3, 5]] + [] please
+
+b[0] = [1] + [2] please
+
+// expect 2
+print(b[0][1]) please
+
+// expect 0
+print(size([] + [] + [])) please
+
