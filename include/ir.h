@@ -350,6 +350,8 @@ struct intermediate_representation {
     // pointer to expression_tree is safe here since the vector it's stored in isn't going to be modified
     std::unordered_map<expression_tree*, full_type> expression_tree_identifier_types;
     identifier_scopes library_func_scopes = {this};
+    // used to store the generic arguments of some library functions for code generation
+    std::unordered_map<int, full_type> generic_arg_type;
     intermediate_representation(identifier_scopes s, std::unordered_map<int, args_list> f_calls = {},
                                 std::unordered_map<int, args_list> a_accesses = {}, std::unordered_map<int, args_list> initial_lists = {},
                                 std::unordered_set<int> unary_op_indexes = {}, std::vector<expression_tree> exp = {},

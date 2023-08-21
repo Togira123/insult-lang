@@ -20,7 +20,10 @@ full_type validate_list(identifier_scopes* cur_scope, int list_index, int exp_in
 void handle_assignment(identifier_scopes* scope, std::string& name, int index, int order_ind);
 
 // makes sure that the type of identifier is set
-identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::string& name, int exp_ind, full_type type_assigned_to = {}) {
+// the last argument, "func_call" is only used to get dynamic overloads of functions with generic arguments, for example push. It is directly used to
+// get the parameters it is called with and then construct a matching overload
+identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::string& name, int exp_ind, full_type type_assigned_to = {},
+                                             std::vector<full_type>* func_call = nullptr) {
     static auto& ir = *cur_scope->get_ir();
     while (true) {
         if (cur_scope->identifiers.count(name)) {
@@ -45,7 +48,7 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
         } else if (cur_scope->level == 0) {
             // no definition found searching all the way up to global scope
             // check if it's a std library name
-            auto& id = identifier_detail_of(ir, name, type_assigned_to);
+            auto& id = identifier_detail_of(ir, name, type_assigned_to, func_call);
             ir.library_func_scopes.identifiers[name].references.insert(exp_ind);
             return id;
         } else {
@@ -182,7 +185,11 @@ full_type& validate_function_call(identifier_scopes* cur_scope, int function_cal
     auto& call = ir.function_calls[function_call];
     // get function definition
     std::string& name = call.identifier;
-    auto& id = get_identifier_definition(cur_scope, name, exp_ind, type_assigned_to);
+    std::vector<full_type> arg_types(call.args.size());
+    for (size_t i = 0; i < call.args.size(); i++) {
+        arg_types[i] = evaluate_expression(cur_scope, call.args[i], exp_ind, {types::UNKNOWN_TYPE});
+    }
+    auto& id = get_identifier_definition(cur_scope, name, exp_ind, type_assigned_to, &arg_types);
     if (id.type.type != types::FUNCTION_TYPE) {
         throw std::runtime_error(name + " is not a function");
     }
@@ -697,6 +704,60 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                     call.type = expected_type;
                 }
             }
+        } else if (root.node == "size" && call.matched_overload == 1) {
+            check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1});
+            if (ir.top_level_expression_type[call.args[0]].array_type == types::UNKNOWN_TYPE) {
+                if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::BOOL_TYPE};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE, types::BOOL_TYPE,
+                                                                          ir.top_level_expression_type[call.args[0]].dimension - 1};
+                }
+            } else {
+                if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {ir.top_level_expression_type[call.args[0]].array_type};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE, ir.top_level_expression_type[call.args[0]].array_type,
+                                                                          ir.top_level_expression_type[call.args[0]].dimension - 1};
+                }
+            }
+        } else if (root.node == "push") {
+            function_detail& fd = ir.function_info[call.matched_overload];
+            check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], fd.body->identifiers[fd.parameter_list[0]].type);
+            check_expressions_for_unknown_array(ir, ir.expressions[call.args[1]], fd.body->identifiers[fd.parameter_list[1]].type);
+            if (fd.body->identifiers[fd.parameter_list[0]].type.array_type == types::UNKNOWN_TYPE) {
+                if (fd.body->identifiers[fd.parameter_list[0]].type.dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::BOOL_TYPE};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE, types::BOOL_TYPE,
+                                                                          fd.body->identifiers[fd.parameter_list[0]].type.dimension - 1};
+                }
+            } else {
+                if (fd.body->identifiers[fd.parameter_list[0]].type.dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {fd.body->identifiers[fd.parameter_list[0]].type.array_type};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE,
+                                                                          fd.body->identifiers[fd.parameter_list[0]].type.array_type,
+                                                                          fd.body->identifiers[fd.parameter_list[0]].type.dimension - 1};
+                }
+            }
+        } else if (root.node == "pop") {
+            check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1});
+            if (ir.top_level_expression_type[call.args[0]].array_type == types::UNKNOWN_TYPE) {
+                if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::BOOL_TYPE};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE, types::BOOL_TYPE,
+                                                                          ir.top_level_expression_type[call.args[0]].dimension - 1};
+                }
+            } else {
+                if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
+                    ir.generic_arg_type[root.args_function_call_index] = {ir.top_level_expression_type[call.args[0]].array_type};
+                } else {
+                    ir.generic_arg_type[root.args_function_call_index] = {types::ARRAY_TYPE, ir.top_level_expression_type[call.args[0]].array_type,
+                                                                          ir.top_level_expression_type[call.args[0]].dimension - 1};
+                }
+            }
         } else {
             function_detail& fd = ir.function_info[call.matched_overload];
             for (size_t i = 0; i < call.args.size(); i++) {
@@ -792,5 +853,20 @@ void check_ir(intermediate_representation& ir) {
     }
     for (auto& ind : ir.array_addition_expressions) {
         check_expressions_for_unknown_array(ir, ir.expressions[ind], ir.top_level_expression_type[ind]);
+    }
+    if (ir.library_func_scopes.identifiers.count("size")) {
+        for (auto& ind : ir.library_func_scopes.identifiers["size"].references) {
+            check_expressions_for_unknown_array(ir, ir.expressions[ind], {types::VOID_TYPE});
+        }
+    }
+    if (ir.library_func_scopes.identifiers.count("push")) {
+        for (auto& ind : ir.library_func_scopes.identifiers["push"].references) {
+            check_expressions_for_unknown_array(ir, ir.expressions[ind], {types::VOID_TYPE});
+        }
+    }
+    if (ir.library_func_scopes.identifiers.count("pop")) {
+        for (auto& ind : ir.library_func_scopes.identifiers["pop"].references) {
+            check_expressions_for_unknown_array(ir, ir.expressions[ind], {types::VOID_TYPE});
+        }
     }
 }

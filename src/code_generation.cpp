@@ -49,6 +49,10 @@ std::string generate_library_functions(intermediate_representation& ir) {
             result += generate_to_double();
         } else if (func == "array") {
             result += generate_array();
+        } else if (func == "push") {
+            result += generate_push();
+        } else if (func == "pop") {
+            result += generate_pop();
         }
     }
     return result;
@@ -133,6 +137,12 @@ std::string generate_function_call(intermediate_representation& ir, int function
             ft.dimension--;
         }
         result += '<' + data_type_to_string(ft) + '>';
+    } else if (call.identifier == "size" && ir.library_func_scopes.identifiers.count("size") && call.matched_overload == 1) {
+        result += '<' + data_type_to_string(ir.generic_arg_type[function_call_index]) + '>';
+    } else if (call.identifier == "push" && ir.library_func_scopes.identifiers.count("push")) {
+        result += '<' + data_type_to_string(ir.generic_arg_type[function_call_index]) + '>';
+    } else if (call.identifier == "pop" && ir.library_func_scopes.identifiers.count("pop")) {
+        result += '<' + data_type_to_string(ir.generic_arg_type[function_call_index]) + '>';
     }
     result += '(';
     if (call.args.size() >= 1) {

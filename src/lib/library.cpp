@@ -3,7 +3,10 @@
 #include <set>
 #include <vector>
 
-identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type type_assigned_to) {
+// the last argument, "func_call" is only used to get dynamic overloads of functions with generic arguments, for example push. It is directly used to
+// get the parameters it is called with and then construct a matching overload
+identifier_detail& identifier_detail_of(intermediate_representation& ir, const std::string& id_name, full_type type_assigned_to,
+                                        std::vector<full_type>* arg_types) {
     if (id_name == "print") {
         // print a value to stdout
         static const std::vector<types> ts = {types::BOOL_TYPE, types::DOUBLE_TYPE, types::INT_TYPE, types::STRING_TYPE};
@@ -162,6 +165,90 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             return ir.library_func_scopes.identifiers["array"];
         }
         return ir.library_func_scopes.identifiers["array"];
+    } else if (id_name == "push") {
+        // add overloads dynamically, similar to array function
+        static std::set<full_type> added_overloads;
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(1);
+        if (!has_been_added_to_ir) {
+            auto* cur_scope = ir.library_func_scopes.new_scope();
+            cur_scope->identifiers["container"] = {{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 2}, -1, true, true};
+            cur_scope->identifiers["container"].parameter_index = 0;
+            cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+            cur_scope->identifiers["element"] = {{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, -1, true, true};
+            cur_scope->identifiers["element"].parameter_index = 1;
+            cur_scope->identifiers["element"].function_info_ind = ir.function_info.size();
+            fi[0] = ir.function_info.size();
+            ir.function_info.push_back({{types::VOID_TYPE}, {"container", "element"}, true, cur_scope});
+            has_been_added_to_ir = true;
+            ir.library_func_scopes.identifiers["push"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
+            added_overloads.insert({types::ARRAY_TYPE, types::UNKNOWN_TYPE, 2});
+        }
+        if (arg_types == nullptr) {
+            throw std::runtime_error("expected a function call pointer");
+        }
+        if (arg_types->size() == 2) {
+            if (arg_types->at(0).type == types::ARRAY_TYPE && arg_types->at(0).array_type != types::UNKNOWN_TYPE) {
+                if (added_overloads.count(arg_types->at(0)) == 0) {
+                    auto* cur_scope = ir.library_func_scopes.new_scope();
+                    cur_scope->identifiers["container"] = {arg_types->at(0), -1, true, true};
+                    cur_scope->identifiers["container"].parameter_index = 0;
+                    cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+                    full_type ft = arg_types->at(0);
+                    if (ft.dimension == 1) {
+                        ft = {ft.array_type};
+                    } else {
+                        ft.dimension--;
+                    }
+                    cur_scope->identifiers["element"] = {ft, -1, true, true};
+                    cur_scope->identifiers["element"].parameter_index = 1;
+                    cur_scope->identifiers["element"].function_info_ind = ir.function_info.size();
+
+                    ir.library_func_scopes.identifiers["push"].type.function_info.push_back(ir.function_info.size());
+                    ir.function_info.push_back({{types::VOID_TYPE}, {"container", "element"}, true, cur_scope});
+                    added_overloads.insert(arg_types->at(0));
+                }
+            } else if (arg_types->at(0).type == types::UNKNOWN_TYPE && arg_types->at(1).type != types::UNKNOWN_TYPE) {
+                identifier_scopes* cur_scope = nullptr;
+                full_type container_type = arg_types->at(1);
+                if (arg_types->at(1).type == types::ARRAY_TYPE && arg_types->at(1).array_type != types::UNKNOWN_TYPE) {
+                    cur_scope = ir.library_func_scopes.new_scope();
+                    container_type.dimension++;
+                } else if (arg_types->at(1).type != types::UNKNOWN_TYPE) {
+                    cur_scope = ir.library_func_scopes.new_scope();
+                    container_type = {types::ARRAY_TYPE, container_type.type, 1};
+                } else {
+                    return ir.library_func_scopes.identifiers["push"];
+                }
+                if (added_overloads.count(container_type) == 0) {
+                    cur_scope->identifiers["container"] = {container_type, -1, true, true};
+                    cur_scope->identifiers["container"].parameter_index = 0;
+                    cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+                    cur_scope->identifiers["element"] = {arg_types->at(1), -1, true, true};
+                    cur_scope->identifiers["element"].parameter_index = 1;
+                    cur_scope->identifiers["element"].function_info_ind = ir.function_info.size();
+
+                    ir.library_func_scopes.identifiers["push"].type.function_info.push_back(ir.function_info.size());
+                    ir.function_info.push_back({{types::VOID_TYPE}, {"container", "element"}, true, cur_scope});
+                    added_overloads.insert(container_type);
+                }
+            }
+        }
+        return ir.library_func_scopes.identifiers["push"];
+    } else if (id_name == "pop") {
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(1);
+        if (!has_been_added_to_ir) {
+            auto* cur_scope = ir.library_func_scopes.new_scope();
+            cur_scope->identifiers["container"] = {{types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1}, -1, true, true};
+            cur_scope->identifiers["container"].parameter_index = 0;
+            cur_scope->identifiers["container"].function_info_ind = ir.function_info.size();
+            fi[0] = ir.function_info.size();
+            ir.function_info.push_back({{types::VOID_TYPE}, {"container"}, true, cur_scope});
+            has_been_added_to_ir = true;
+            ir.library_func_scopes.identifiers["pop"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
+        }
+        return ir.library_func_scopes.identifiers["pop"];
     } else {
         throw std::runtime_error("no definition found for " + id_name);
     }
@@ -225,6 +312,30 @@ std::string generate_array() {
                                 "template<typename v>"
                                 "std::vector<v> array(int i){\n"
                                 "\treturn std::vector<v>(i);\n"
+                                "}\n";
+    return result;
+}
+
+std::string generate_push() {
+    static std::string result = "template<typename t>"
+                                "void push(std::vector<t>&& v,t e){\n"
+                                "\tv.push_back(e);\n"
+                                "}\n"
+                                "template <typename t>"
+                                "void push(std::vector<t>& v,t e){\n"
+                                "\tv.push_back(e);\n"
+                                "}\n";
+    return result;
+}
+
+std::string generate_pop() {
+    static std::string result = "template<typename t>"
+                                "void pop(std::vector<t>&& v){\n"
+                                "\tv.pop_back();\n"
+                                "}\n"
+                                "template<typename t>"
+                                "void pop(std::vector<t>& v){\n"
+                                "\tv.pop_back();\n"
                                 "}\n";
     return result;
 }
