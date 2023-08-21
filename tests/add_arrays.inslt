@@ -16,3 +16,25 @@ print(b[0][1]) please
 // expect 0
 print(size([] + [] + [])) please
 
+a = a + [1] please
+a[0] = 2 please
+
+// expect 0
+print(size([])) please
+
+// expect 2
+print(size(a)) please
+
+push(a, 3) please
+push(a, 4) please
+
+// expect 4
+print(size(a)) please
+
+pop(array(3, [])) please
+
+pop(a) please
+
+// expect 3
+print(size(a)) please
+
