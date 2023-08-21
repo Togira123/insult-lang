@@ -59,12 +59,12 @@ To compile first create a directory named `build` in the root and then run
 cd build && cmake .. && make
 ```
 
-This will create an executable named `a.out`.
+This will create an executable named `inslt`.
 
 ## Running
 
-After compiling make sure you are in the `build` directory. Use `./a.out` to run the executable. It takes up to two arguments, the first one being the input file and the second one being an optional output name for the compiled program (defaults to `a.out` which will overwrite the compiler executable with the same name!). For example you can run
+After compiling make sure you are in the `build` directory. Use `./inslt` to run the executable. It takes up to two arguments, the first one being the input file and the second one being an optional output name for the compiled program (defaults to `a.out`). For example you can run
 ```bash
-./a.out ../tests/fibonacci.inslt my_output_file
+./inslt ../tests/fibonacci.inslt my_output_file
 ```
 to compile the file `fibonacci.inslt` located in the `tests` directory and name the resulting file `my_output_file`. That file can now be run with `./my_output_file`.
