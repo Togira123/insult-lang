@@ -1238,6 +1238,10 @@ int main(int argc, char* argv[]) {
     try {
         token_list = scan_program(argc, argv);
     } catch (std::runtime_error& e) {
+        if (std::string(e.what()) == "Specify program to compile!" || std::string(e.what()) == "There was an error trying to compile the file!") {
+            std::cerr << e.what() << std::endl;
+            return 1;
+        }
         outstream << get_random_program();
         outstream.close();
         if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
