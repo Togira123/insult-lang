@@ -128,7 +128,11 @@ std::string generate_array_access(intermediate_representation& ir, int array_acc
 
 std::string generate_function_call(intermediate_representation& ir, int function_call_index, const std::string& assignee) {
     auto& call = ir.function_calls[function_call_index];
-    std::string result = (call.identifier == "to_string" && ir.library_func_scopes.identifiers.count("to_string") ? "std::" : "") + call.identifier;
+    std::string result = ((call.identifier == "to_string" && ir.library_func_scopes.identifiers.count("to_string")) ||
+                                  (call.identifier == "sqrt" && ir.library_func_scopes.identifiers.count("sqrt"))
+                              ? "std::"
+                              : "") +
+                         call.identifier;
     if (call.identifier == "array" && ir.library_func_scopes.identifiers.count("array")) {
         full_type ft = call.type;
         if (ft.dimension == 1) {

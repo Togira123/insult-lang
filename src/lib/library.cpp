@@ -249,6 +249,23 @@ identifier_detail& identifier_detail_of(intermediate_representation& ir, const s
             ir.library_func_scopes.identifiers["pop"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
         }
         return ir.library_func_scopes.identifiers["pop"];
+    } else if (id_name == "sqrt") {
+        static const std::vector<types> ts = {types::DOUBLE_TYPE, types::INT_TYPE};
+        static bool has_been_added_to_ir = false;
+        static std::vector<size_t> fi(ts.size());
+        if (!has_been_added_to_ir) {
+            for (size_t i = 0; i < ts.size(); i++) {
+                auto* cur_scope = ir.library_func_scopes.new_scope();
+                cur_scope->identifiers["value"] = {{ts[i]}, -1, true, true};
+                cur_scope->identifiers["value"].parameter_index = 0;
+                cur_scope->identifiers["value"].function_info_ind = ir.function_info.size();
+                fi[i] = ir.function_info.size();
+                ir.function_info.push_back({{types::DOUBLE_TYPE}, {"value"}, true, cur_scope});
+            }
+            has_been_added_to_ir = true;
+            ir.library_func_scopes.identifiers["sqrt"] = {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0, fi}, -1, true, true};
+        }
+        return ir.library_func_scopes.identifiers["sqrt"];
     } else {
         throw std::runtime_error("no definition found for " + id_name);
     }
