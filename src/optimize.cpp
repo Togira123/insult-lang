@@ -203,7 +203,7 @@ bool includes_function_call(intermediate_representation& ir, expression_tree& ro
     return root.type == node_type::FUNCTION_CALL;
 }
 
-void rename_identifiers(identifier_scopes& scope) {
+void rename_identifiers(identifier_scopes& scope, const bool should_optimize) {
     static auto& ir = *scope.get_ir();
     static std::unordered_map<identifier_scopes*, std::unordered_map<std::string, std::vector<std::pair<int, int>>>> new_names_assignment;
     // for each identifier rename it and also rename all references
@@ -261,7 +261,7 @@ void rename_identifiers(identifier_scopes& scope) {
             // keep parameters
             references_besides_definition++;
         }
-        if (references_besides_definition == 0) {
+        if (references_besides_definition == 0 && should_optimize) {
             for (auto& [order_scope, order_ind] : id.order_references) {
                 order_scope->order[order_ind].is_comment = true;
             }
@@ -272,7 +272,7 @@ void rename_identifiers(identifier_scopes& scope) {
     }
     scope.assignments = std::move(new_names_assignment[&scope]);
     for (auto& s : scope.get_lower()) {
-        rename_identifiers(s);
+        rename_identifiers(s, should_optimize);
     }
     scope.identifiers = std::move(new_names);
 }
@@ -595,8 +595,10 @@ void constant_folding(intermediate_representation& ir) {
     }
 }
 
-void optimize(intermediate_representation& ir) {
+void optimize(intermediate_representation& ir, bool should_optimize) {
     // rename all identifiers
-    rename_identifiers(ir.scopes);
-    constant_folding(ir);
+    rename_identifiers(ir.scopes, should_optimize);
+    if (should_optimize) {
+        constant_folding(ir);
+    }
 }

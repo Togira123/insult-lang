@@ -2,6 +2,7 @@
 #define HEADER_UTIL_H
 #include "language.h"
 #include <string>
+#include <unordered_map>
 
 // https://stackoverflow.com/a/25829233/14553195
 inline std::string& ltrim(std::string& s) {
@@ -26,4 +27,6 @@ struct token {
     token_type name;
     std::string value;
 };
+
+enum class compiler_flag { OPTIMIZE, OUTPUT };
 #endif

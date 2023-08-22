@@ -162,3 +162,25 @@ private:
     std::string last_assignment = "";
     size_t last_assignment_ind = -1;
 };
+
+// flag is passed without the "-"
+inline compiler_flag string_to_compiler_flag(const std::string& flag) {
+    static const std::unordered_map<std::string, compiler_flag> convert = {{"optimize", compiler_flag::OPTIMIZE},
+                                                                           {"optimise", compiler_flag::OPTIMIZE},
+                                                                           {"o", compiler_flag::OPTIMIZE},
+                                                                           {"output", compiler_flag::OUTPUT},
+                                                                           {"out", compiler_flag::OUTPUT}};
+    if (convert.count(flag) == 0) {
+        throw std::runtime_error("unknown compiler flag");
+    }
+    return convert.at(flag);
+}
+
+inline bool flag_requires_argument(compiler_flag flag) {
+    switch (flag) {
+    case compiler_flag::OUTPUT:
+        return true;
+    default:
+        return false;
+    }
+}

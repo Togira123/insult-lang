@@ -63,8 +63,20 @@ This will create an executable named `inslt`.
 
 ## Running
 
-After compiling make sure you are in the `build` directory. Use `./inslt` to run the executable. It takes up to two arguments, the first one being the input file and the second one being an optional output name for the compiled program (defaults to `a.out`). For example you can run
+After compiling make sure you are in the `build` directory. Use `./inslt` to run the executable. It takes one argument which is the name of the file to compile. For example you can run
 ```bash
-./inslt ../tests/fibonacci.inslt my_output_file
+./inslt ../tests/fibonacci.inslt
 ```
-to compile the file `fibonacci.inslt` located in the `tests` directory and name the resulting file `my_output_file`. That file can now be run with `./my_output_file`.
+to compile the file `fibonacci.inslt` located in the `tests` directory. The resulting file will have the default name `a.out`. That file can now be run with `./a.out`.
+
+### Compiler flags
+
+There are a few compiler flags which can be used to enable/disable certain features the compiler can offer. To use them just append them to the input file name, separated by spaces. Below is a list of all the currently available flags.
+
+* __-optimize__
+
+    Using this flag will tell the compiler to perform some optimization steps in order to make the resulting executable run faster and use up less memory. Omitting this flag will **not** prevent the compiler from performing some minor changes to the input.
+
+* __-out__ <*name*>
+
+    This flag can be used to set the name of the output file. This defaults to `a.out`. Set the name without the angle brackets.

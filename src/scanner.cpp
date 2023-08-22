@@ -379,11 +379,11 @@ std::string punctuation(std::vector<char>& buffer, int& index) {
     }
 }
 
-std::list<token>& scan_program(int argc, char* argv[]) {
-    if (argc < 2) {
+std::list<token>& scan_program(std::vector<std::string> args) {
+    if (args.size() < 2) {
         throw std::runtime_error("Specify program to compile!");
     }
-    file = std::ifstream(argv[1]);
+    file = std::ifstream(args[1]);
     if (!file.good()) {
         file.close();
         throw std::runtime_error("There was an error trying to compile the file!");

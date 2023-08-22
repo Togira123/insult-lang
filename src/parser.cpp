@@ -1223,6 +1223,37 @@ bool program() {
 }
 
 int main(int argc, char* argv[]) {
+    std::unordered_map<compiler_flag, std::string> flags;
+    std::vector<std::string> non_flag_arguments = {argv[0]};
+    // set to optimize as this doesn't require any arguments
+    compiler_flag last_flag = compiler_flag::OPTIMIZE;
+    for (int i = 1; i < argc; i++) {
+        if (*argv[i] == '-') {
+            try {
+                if (flag_requires_argument(last_flag)) {
+                    throw std::runtime_error("flag \"" + std::string(argv[i - 1] + 1) + "\" expected argument");
+                }
+                auto flag = string_to_compiler_flag(argv[i] + 1);
+                flags[std::move(flag)] = "";
+                last_flag = flag;
+            } catch (std::runtime_error& e) {
+                std::cerr << e.what() << std::endl;
+                return 1;
+            }
+        } else {
+            if (flag_requires_argument(last_flag)) {
+                flags[last_flag] = argv[i];
+                // set to optimize as this doesn't require any arguments
+                last_flag = compiler_flag::OPTIMIZE;
+            } else {
+                non_flag_arguments.push_back(argv[i]);
+            }
+        }
+    }
+    if (flag_requires_argument(last_flag)) {
+        std::cerr << "flag \"" + std::string(argv[argc - 1] + 1) + "\" expected argument" << std::endl;
+        return 1;
+    }
     std::string tmp_file = "";
     std::srand(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     do {
@@ -1231,12 +1262,12 @@ int main(int argc, char* argv[]) {
     } while (std::filesystem::exists(tmp_file));
     std::ofstream outstream(tmp_file);
     std::string output_file = "a.out";
-    if (argc >= 3) {
-        output_file = argv[2];
+    if (flags.count(compiler_flag::OUTPUT)) {
+        output_file = flags[compiler_flag::OUTPUT];
     }
     std::list<token> token_list;
     try {
-        token_list = scan_program(argc, argv);
+        token_list = scan_program(non_flag_arguments);
     } catch (std::runtime_error& e) {
         if (std::string(e.what()) == "Specify program to compile!" || std::string(e.what()) == "There was an error trying to compile the file!") {
             std::cerr << e.what() << std::endl;
@@ -1272,7 +1303,7 @@ int main(int argc, char* argv[]) {
                 std::filesystem::remove(tmp_file);
                 return 0;
             }
-            optimize(ir);
+            optimize(ir, flags.count(compiler_flag::OPTIMIZE));
             // check_ir(ir);
             outstream << generate_code(ir);
         } else {
@@ -1282,8 +1313,7 @@ int main(int argc, char* argv[]) {
         outstream << get_random_program();
     }
     outstream.close();
-    // TODO: add "-w" flag which supresses all warnings
-    if (std::system(("g++ -Wall -o " + output_file + " -D_GLIBCXX_DEBUG -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+    if (std::system(("g++ -w -o " + output_file + " -D_GLIBCXX_DEBUG -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("gcc is required on your system to compile this program");
     }
