@@ -141,7 +141,9 @@ std::string generate_function_call(intermediate_representation& ir, int function
             ft.dimension--;
         }
         result += '<' + data_type_to_string(ft) + '>';
-    } else if (call.identifier == "size" && ir.library_func_scopes.identifiers.count("size") && call.matched_overload == 1) {
+    } else if (call.identifier == "size" && ir.library_func_scopes.identifiers.count("size") &&
+               ir.function_info[call.matched_overload].body->identifiers[ir.function_info[call.matched_overload].parameter_list[0]].type.type ==
+                   types::ARRAY_TYPE) {
         result += '<' + data_type_to_string(ir.generic_arg_type[function_call_index]) + '>';
     } else if (call.identifier == "push" && ir.library_func_scopes.identifiers.count("push")) {
         result += '<' + data_type_to_string(ir.generic_arg_type[function_call_index]) + '>';

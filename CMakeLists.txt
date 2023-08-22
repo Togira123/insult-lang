@@ -25,3 +25,4 @@ add_test(NAME read_input COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/read_input.in
 add_test(NAME fast_fibonacci COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/fast_fibonacci.inslt test_output_fast_fibonacci)
 add_test(NAME gridpath COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/gridpath.inslt test_output_gridpath)
 add_test(NAME add_arrays COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/add_arrays.inslt test_output_add_arrays)
+add_test(NAME abc COMMAND a.out ${PROJECT_SOURCE_DIR}/tests/abc.inslt test_output_abc)

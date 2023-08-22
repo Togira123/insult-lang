@@ -1,0 +1,19 @@
+// upon receiving a string, prints how many distinct "abc"'s there are. They don't have to be consequent
+// ababc would print 3
+
+def s = read_line() please
+def count = 0 please
+def as = 0 please
+def abs = 0 please
+
+for (def i = 0; i < size(s); i = i + 1) {
+    if (s[i] == "a") {
+        as = as + 1 please
+    } else if (s[i] == "b") {
+        abs = abs + as please
+    } else if (s[i] == "c") {
+        count = count + abs please
+    }
+}
+
+print(to_string(count)) please
