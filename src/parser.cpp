@@ -1254,6 +1254,8 @@ int main(int argc, char* argv[]) {
     tokens.init(token_list);
     if (tokens.current().name == token_type::END_OF_INPUT) {
         // empty file
+        outstream.close();
+        std::filesystem::remove(tmp_file);
         throw std::runtime_error("input file is empty");
     }
     if (program()) {
