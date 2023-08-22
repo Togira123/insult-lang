@@ -670,7 +670,7 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
     }
     case node_type::FUNCTION_CALL: {
         auto& call = ir.function_calls[root.args_function_call_index];
-        if (root.node == "array") {
+        if (root.node == "array" && ir.library_func_scopes.identifiers.count("array")) {
             check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], {types::INT_TYPE});
             if (call.args.size() == 2) {
                 if (call.type.dimension == 1) {
@@ -704,7 +704,9 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                     call.type = expected_type;
                 }
             }
-        } else if (root.node == "size" && call.matched_overload == 1) {
+        } else if (root.node == "size" && ir.library_func_scopes.identifiers.count("size") &&
+                   ir.function_info[call.matched_overload].body->identifiers[ir.function_info[call.matched_overload].parameter_list[0]].type.type ==
+                       types::ARRAY_TYPE) {
             check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1});
             if (ir.top_level_expression_type[call.args[0]].array_type == types::UNKNOWN_TYPE) {
                 if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
@@ -721,7 +723,7 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                                                                           ir.top_level_expression_type[call.args[0]].dimension - 1};
                 }
             }
-        } else if (root.node == "push") {
+        } else if (root.node == "push" && ir.library_func_scopes.identifiers.count("push")) {
             function_detail& fd = ir.function_info[call.matched_overload];
             check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], fd.body->identifiers[fd.parameter_list[0]].type);
             check_expressions_for_unknown_array(ir, ir.expressions[call.args[1]], fd.body->identifiers[fd.parameter_list[1]].type);
@@ -741,7 +743,7 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                                                                           fd.body->identifiers[fd.parameter_list[0]].type.dimension - 1};
                 }
             }
-        } else if (root.node == "pop") {
+        } else if (root.node == "pop" && ir.library_func_scopes.identifiers.count("pop")) {
             check_expressions_for_unknown_array(ir, ir.expressions[call.args[0]], {types::ARRAY_TYPE, types::UNKNOWN_TYPE, 1});
             if (ir.top_level_expression_type[call.args[0]].array_type == types::UNKNOWN_TYPE) {
                 if (ir.top_level_expression_type[call.args[0]].dimension == 1) {
@@ -794,6 +796,9 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                         t.array_type = types::BOOL_TYPE;
                         t.dimension = expected_type.dimension;
                         ir.array_addition_result[&root] = std::move(t);
+                        if (root.index >= 0) {
+                            ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                        }
                     } else {
                         if (t1.type == types::UNKNOWN_TYPE) {
                             if (t2.type == types::ARRAY_TYPE) {
@@ -803,11 +808,17 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                                 }
                                 t.dimension++;
                                 ir.array_addition_result[&root] = std::move(t);
+                                if (root.index >= 0) {
+                                    ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                                }
                             } else {
                                 full_type t;
                                 t.array_type = t2.type;
                                 t.dimension = 1;
                                 ir.array_addition_result[&root] = std::move(t);
+                                if (root.index >= 0) {
+                                    ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                                }
                             }
                         } else {
                             if (t1.type == types::ARRAY_TYPE) {
@@ -817,16 +828,25 @@ void check_expressions_for_unknown_array(intermediate_representation& ir, expres
                                 }
                                 t.dimension++;
                                 ir.array_addition_result[&root] = std::move(t);
+                                if (root.index >= 0) {
+                                    ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                                }
                             } else {
                                 full_type t;
                                 t.array_type = t1.type;
                                 t.dimension = 1;
                                 ir.array_addition_result[&root] = std::move(t);
+                                if (root.index >= 0) {
+                                    ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                                }
                             }
                         }
                     }
                 } else {
                     ir.array_addition_result[&root] = expected_type;
+                    if (root.index >= 0) {
+                        ir.top_level_expression_type[root.index] = ir.array_addition_result[&root];
+                    }
                 }
             } else {
                 check_expressions_for_unknown_array(ir, *root.right, full_type{types::UNKNOWN_TYPE});
