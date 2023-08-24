@@ -54,7 +54,7 @@ void rollback(int& index, int& fence) {
     }
 }
 
-std::string comment(std::vector<char>& buffer, int& index, int& fence) {
+std::string comment(std::vector<char>& buffer, int& index, int& fence, int& line) {
     if (cur_char(buffer, index) != '/') {
         return "";
     }
@@ -72,7 +72,10 @@ std::string comment(std::vector<char>& buffer, int& index, int& fence) {
         char c = next_char(buffer, index, fence);
         while (c != EOF) {
             result += c;
-            if (c == '*') {
+            if (c == '\n') {
+                line++;
+                c = next_char(buffer, index, fence);
+            } else if (c == '*') {
                 if ((c = next_char(buffer, index, fence)) == '/') {
                     return result + '/';
                 }
@@ -105,19 +108,23 @@ std::string whitespace(std::vector<char>& buffer, int& index, int& fence) {
 }
 
 std::string newline(std::vector<char>& buffer, int& index, int& fence, int& line) {
-    if (cur_char(buffer, index) != '\n' && comment(buffer, index, fence) == "" && whitespace(buffer, index, fence) == "") {
+    if (cur_char(buffer, index) != '\n' && comment(buffer, index, fence, line) == "" && whitespace(buffer, index, fence) == "") {
         return "";
     }
     std::string result = "";
     result += cur_char(buffer, index);
     bool contains_one_newline = result == "\n";
-    line++;
+    if (contains_one_newline) {
+        line++;
+    }
     char c = next_char(buffer, index, fence);
-    while (c == '\n' || comment(buffer, index, fence) != "" || whitespace(buffer, index, fence) != "") {
+    while (c == '\n' || comment(buffer, index, fence, line) != "" || whitespace(buffer, index, fence) != "") {
         if (!contains_one_newline && c == '\n') {
             contains_one_newline = true;
         }
-        line++;
+        if (c == '\n') {
+            line++;
+        }
         result += c;
         c = next_char(buffer, index, fence);
     }
@@ -126,7 +133,7 @@ std::string newline(std::vector<char>& buffer, int& index, int& fence, int& line
 }
 
 std::string integer(std::vector<char>& buffer, int& index, int& fence) {
-    // the "-" or "+" signs integers may have are not included here since they're viewed as unary operators on integers
+    // the "-" or "+" signs are not included here since they're viewed as unary operators on integers
     if (cur_char(buffer, index) < '0' || cur_char(buffer, index) > '9') {
         return "";
     }
@@ -240,7 +247,7 @@ std::string logical_operator(std::vector<char>& buffer, int& index, int& fence) 
     return "";
 }
 
-std::string logicalnot(std::vector<char>& buffer, int& index) { return (cur_char(buffer, index) == '!') ? "!" : ""; }
+std::string logical_not(std::vector<char>& buffer, int& index) { return (cur_char(buffer, index) == '!') ? "!" : ""; }
 
 std::pair<bool, std::string> string_token(std::vector<char>& buffer, int& index, int& fence) {
     if (cur_char(buffer, index) != '"') {
@@ -249,13 +256,23 @@ std::pair<bool, std::string> string_token(std::vector<char>& buffer, int& index,
     char c = next_char(buffer, index, fence);
     std::string result = "";
     bool ignore_next = false;
+    size_t last_escaping_back_slash = 0;
     while (c != EOF && (c != '"' || ignore_next)) {
         if (c == '\\' && !ignore_next) {
+            last_escaping_back_slash = result.length();
             ignore_next = true;
         } else {
             ignore_next = false;
         }
-        result += c;
+        if (c == '\n') {
+            if (last_escaping_back_slash == result.length() - 1) {
+                result += "\\\\n";
+            } else {
+                result += "\\n";
+            }
+        } else {
+            result += c;
+        }
         c = next_char(buffer, index, fence);
     }
     if (c == EOF) {
@@ -407,7 +424,7 @@ std::list<token>& scan_program(std::vector<std::string> args) {
         std::pair<bool, std::string> str_result;
         if ((result = newline(buffer, index, fence, line)) != "") {
             token_list.push_back({token_type::NEWLINE, result});
-        } else if ((result = comment(buffer, index, fence)) != "") {
+        } else if ((result = comment(buffer, index, fence, line)) != "") {
             // scanned comment, do not add to token_list
         } else if ((result = double_token(buffer, index, fence)) != "") {
             token_list.push_back({token_type::DOUBLE, result});
@@ -419,7 +436,7 @@ std::list<token>& scan_program(std::vector<std::string> args) {
             token_list.push_back({token_type::LOGICAL_OPERATOR, result});
         } else if ((result = comparison_operator(buffer, index, fence)) != "") {
             token_list.push_back({token_type::COMPARISON_OPERATOR, result});
-        } else if ((result = logicalnot(buffer, index)) != "") {
+        } else if ((result = logical_not(buffer, index)) != "") {
             token_list.push_back({token_type::LOGICAL_NOT, result});
         } else if ((str_result = string_token(buffer, index, fence)).first) {
             result = std::move(str_result.second);
