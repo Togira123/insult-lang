@@ -26,3 +26,4 @@ add_test(NAME fast_fibonacci COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/fast_fibo
 add_test(NAME gridpath COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/gridpath.inslt test_output_gridpath)
 add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.inslt test_output_add_arrays)
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt test_output_abc)
+add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt test_output_multiline_strings)

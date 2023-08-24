@@ -1,0 +1,11 @@
+def s1 = "simple string" please
+def s2 = "multi
+line
+string" please
+def s3 = "multiline but also has \
+backslash\\es
+like this\\" please
+
+print(s1) please
+print(s2) please
+print(s3) please
