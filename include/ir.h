@@ -360,5 +360,5 @@ struct intermediate_representation {
           expressions(exp), function_info(fi){};
 };
 
-void check_ir(intermediate_representation& ir);
+void check_ir(intermediate_representation& ir, const std::unordered_map<compiler_flag, std::string>& flags);
 #endif

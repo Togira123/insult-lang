@@ -28,5 +28,5 @@ struct token {
     std::string value;
 };
 
-enum class compiler_flag { OPTIMIZE, OUTPUT };
+enum class compiler_flag { OPTIMIZE, OUTPUT, FORBID_LIBRARY_NAMES };
 #endif

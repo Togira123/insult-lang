@@ -80,3 +80,7 @@ There are a few compiler flags which can be used to enable/disable certain featu
 * __-out__ <*name*>
 
     This flag can be used to set the name of the output file. This defaults to `a.out`. Set the name without the angle brackets.
+
+* __-forbid_library_names__
+
+    This flag forbids names of the standard library being used to define identifiers.

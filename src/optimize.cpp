@@ -209,7 +209,7 @@ void rename_identifiers(identifier_scopes& scope, const bool should_optimize) {
     // for each identifier rename it and also rename all references
     std::unordered_map<std::string, identifier_detail> new_names;
     for (auto& [name, id] : scope.identifiers) {
-        if (library_functions.count(name)) {
+        if (library_functions.count(name) && ir.library_func_scopes.identifiers.count(name)) {
             continue;
         }
         size_t references_besides_definition = 0;

@@ -169,7 +169,9 @@ inline compiler_flag string_to_compiler_flag(const std::string& flag) {
                                                                            {"optimise", compiler_flag::OPTIMIZE},
                                                                            {"o", compiler_flag::OPTIMIZE},
                                                                            {"output", compiler_flag::OUTPUT},
-                                                                           {"out", compiler_flag::OUTPUT}};
+                                                                           {"out", compiler_flag::OUTPUT},
+                                                                           {"forbid_library_names", compiler_flag::FORBID_LIBRARY_NAMES},
+                                                                           {"forbid_lib_names", compiler_flag::FORBID_LIBRARY_NAMES}};
     if (convert.count(flag) == 0) {
         throw std::runtime_error("unknown compiler flag");
     }

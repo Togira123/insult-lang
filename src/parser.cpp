@@ -1292,7 +1292,7 @@ int main(int argc, char* argv[]) {
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
             try {
-                check_ir(ir);
+                check_ir(ir, flags);
             } catch (std::runtime_error& e) {
                 outstream << get_random_program();
                 outstream.close();
