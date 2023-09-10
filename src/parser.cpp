@@ -245,7 +245,7 @@ bool program();
 std::pair<std::string, int> array_access();
 
 // passing "1" for add_to_ir will add it to the ir, passing "2" will add it directly (not to temp tree)
-inline bool expression(int iteration = 0, int add_to_ir = 0);
+inline bool expression(int iteration = 0, bool add_to_ir = false);
 
 inline bool identifier() {
     // syntax of identifier already checked when scanning
@@ -297,8 +297,8 @@ inline std::pair<bool, int> list_expression() {
             // ir.lists[cur_ind] = {tokens.current_index(), std::vector<int>{}, ""};
             return {true, cur_ind};
         }
-        if (expression(0, 2)) {
-            std::vector<size_t> args = {tmp_exp_tree.last_exp_index()};
+        if (expression(0, true)) {
+            std::vector<size_t> args = {ir.expressions.size()};
             tokens.next();
             while (true) {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
@@ -309,8 +309,8 @@ inline std::pair<bool, int> list_expression() {
                 }
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                     tokens.next();
-                    if (expression(0, 2)) {
-                        args.push_back(tmp_exp_tree.last_exp_index());
+                    if (expression(0, true)) {
+                        args.push_back(ir.expressions.size());
                         tokens.next();
                         continue;
                     }
@@ -325,7 +325,7 @@ inline std::pair<bool, int> list_expression() {
     return {false, -1};
 }
 
-bool parenthesesed_expression(int add_to_ir) {
+bool parenthesesed_expression(bool add_to_ir) {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
         tokens.next();
@@ -427,8 +427,8 @@ bool while_statement() {
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
-            if (expression(0, 2)) {
-                int condition = tmp_exp_tree.last_exp_index();
+            if (expression(0, true)) {
+                int condition = ir.expressions.size();
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
@@ -455,7 +455,7 @@ bool partial_assignment() {
     int cur_ind = tokens.current_index();
     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "=") {
         tokens.next();
-        if (expression(0, 1)) {
+        if (expression(0, true)) {
             return true;
         }
     }
@@ -481,11 +481,11 @@ bool assignment() {
             tree.args_array_access_index = p.second;
         }
         tokens.next();
-        tmp_exp_tree.add_expression_to_ir(tree, true);
-        size_t ind = tmp_exp_tree.last_exp_index();
+        ir.expressions.push_back(std::move(tree));
+        size_t ind = ir.expressions.size();
         if (partial_assignment()) {
-            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, tmp_exp_tree.last_exp_index(), ind);
-            // current_scope->assignments[identifier_name].push_back(tmp_exp_tree.last_exp_index());
+            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, ir.expressions.size(), ind);
+            // current_scope->assignments[identifier_name].push_back(ir.expressions.size());
             return true;
         }
         tokens.previous();
@@ -511,8 +511,8 @@ bool definition_or_definition_and_assignment() {
                     tokens.next();
                     if (partial_assignment()) {
                         // definition and assignment
-                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)tmp_exp_tree.last_exp_index()});
-                        // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)ir.expressions.size()});
+                        // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size(), true};
                         return true;
                     } else {
                         tokens.previous();
@@ -523,8 +523,8 @@ bool definition_or_definition_and_assignment() {
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)tmp_exp_tree.last_exp_index()});
-                // current_scope->identifiers[identifier_name] = {{}, tmp_exp_tree.last_exp_index(), true};
+                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)ir.expressions.size()});
+                // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size(), true};
                 return true;
             }
         }
@@ -579,8 +579,8 @@ bool for_statement() {
             }
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                 tokens.next();
-                if (expression(0, 2)) {
-                    fss.condition = tmp_exp_tree.last_exp_index();
+                if (expression(0, true)) {
+                    fss.condition = ir.expressions.size();
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                         tokens.next();
@@ -635,14 +635,14 @@ std::pair<std::string, int> function_call() {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
                     continue;
-                } else if (expression(0, 2)) {
-                    calls.push_back({tmp_exp_tree.last_exp_index()});
+                } else if (expression(0, true)) {
+                    calls.push_back({ir.expressions.size()});
                     tokens.next();
                     while (true) {
                         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                             tokens.next();
-                            if (expression(0, 2)) {
-                                calls.push_back(tmp_exp_tree.last_exp_index());
+                            if (expression(0, true)) {
+                                calls.push_back(ir.expressions.size());
                                 tokens.next();
                                 continue;
                             }
@@ -689,8 +689,8 @@ std::pair<std::string, int> array_access() {
             iterations++;
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
                 tokens.next();
-                if (expression(0, 2)) {
-                    args.push_back(tmp_exp_tree.last_exp_index());
+                if (expression(0, true)) {
+                    args.push_back(ir.expressions.size());
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
                         tokens.next();
@@ -731,8 +731,8 @@ std::pair<bool, size_t> if_structure() {
         tokens.next();
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
-            if (expression(0, 2)) {
-                int condition = tmp_exp_tree.last_exp_index();
+            if (expression(0, true)) {
+                int condition = ir.expressions.size();
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
@@ -815,7 +815,7 @@ inline bool return_statement() {
     if (tokens.current().name == token_type::CONTROL && tokens.current().value == "return") {
         tokens.next();
         bool has_exp;
-        if ((has_exp = expression(0, 1))) {
+        if ((has_exp = expression(0, true))) {
             tokens.next();
         }
         if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "please") {
@@ -827,7 +827,7 @@ inline bool return_statement() {
                     }
                     return false;
                 }
-                ir.return_statements.push_back(tmp_exp_tree.last_exp_index());
+                ir.return_statements.push_back(ir.expressions.size());
                 current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
                 return true;
             }
@@ -846,7 +846,7 @@ inline bool return_statement() {
             }
             if (!p.second) {
                 // was actually accepted
-                ir.return_statements.push_back(tmp_exp_tree.last_exp_index());
+                ir.return_statements.push_back(ir.expressions.size());
                 current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
                 tokens.previous();
                 return true;
@@ -1020,7 +1020,7 @@ bool function_statement() {
 inline bool expression_statement() {
     auto it = tokens.iterator_at_current_pos();
     int cur_ind = tokens.current_index();
-    if (expression(0, 1)) {
+    if (expression(0, true)) {
         tokens.next();
         if (tokens.current().name != token_type::GENERAL_KEYWORD || tokens.current().value != "please") {
             // expression has no please, discard
@@ -1034,7 +1034,7 @@ inline bool expression_statement() {
             tokens.previous();
             if (!p.second) {
                 // was actually accepted
-                current_scope->order.push_back({tmp_exp_tree.last_exp_index(), statement_type::EXPRESSION});
+                current_scope->order.push_back({ir.expressions.size(), statement_type::EXPRESSION});
             }
         } else {
             // expression has please, accept expressions
@@ -1044,7 +1044,7 @@ inline bool expression_statement() {
                 }
                 return false;
             }
-            current_scope->order.push_back({tmp_exp_tree.last_exp_index(), statement_type::EXPRESSION});
+            current_scope->order.push_back({ir.expressions.size(), statement_type::EXPRESSION});
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement
                 std::queue<token*> token_queue;
@@ -1133,64 +1133,56 @@ inline bool statement() {
            expression_statement();
 }
 
-inline bool expression(int iteration, int add_to_ir) {
+inline bool expression(int iteration, bool add_to_ir) {
     std::pair<std::string, int> type;
     std::pair<bool, int> nested_exp;
     std::pair<std::string, std::vector<std::vector<int>>*> type_for_func;
     std::pair<std::string, std::vector<int>*> type_for_array_and_list;
     if (iteration == 0 && (nested_exp = comparison_or_arithmetic_expression_or_logical_expression()).first) {
-        if (add_to_ir > 0) {
-            tmp_exp_tree.add_expression_to_ir(*construct_exp_tree(nested_exp.second), add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back(std::move(*construct_exp_tree(nested_exp.second)));
         }
     } else if (iteration < 2 && (nested_exp = unary_expression()).first) {
-        if (add_to_ir > 0) {
-            tmp_exp_tree.add_expression_to_ir(*construct_exp_tree(nested_exp.second), add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back(std::move(*construct_exp_tree(nested_exp.second)));
         }
     } else if ((type = function_call()).first != "") {
-        if (add_to_ir > 0) {
-            expression_tree et = {type.first, node_type::FUNCTION_CALL, type.second};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({type.first, node_type::FUNCTION_CALL, type.second});
         }
     } else if ((type = array_access()).first != "") {
-        if (add_to_ir > 0) {
-            expression_tree et = {type.first, node_type::ARRAY_ACCESS, type.second};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({type.first, node_type::ARRAY_ACCESS, type.second});
         }
     } else if (identifier()) {
-        if (add_to_ir > 0) {
-            expression_tree et = {node_type::IDENTIFIER, tokens.current().value};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({node_type::IDENTIFIER, tokens.current().value});
         }
     } else if (double_token()) {
-        if (add_to_ir > 0) {
-            expression_tree et = {node_type::DOUBLE, tokens.current().value};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({node_type::DOUBLE, tokens.current().value});
         }
     } else if (integer()) {
-        if (add_to_ir > 0) {
-            expression_tree et = {node_type::INT, tokens.current().value};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({node_type::INT, tokens.current().value});
         }
     } else if (string_token()) {
-        if (add_to_ir > 0) {
-            expression_tree et = {node_type::STRING, tokens.current().value};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({node_type::STRING, tokens.current().value});
         }
     } else if (boolean()) {
-        if (add_to_ir > 0) {
-            expression_tree et = {node_type::BOOL, tokens.current().value};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({node_type::BOOL, tokens.current().value});
         }
     } else if ((nested_exp = list_expression()).first) {
-        if (add_to_ir > 0) {
-            expression_tree et = {"", node_type::LIST, nested_exp.second};
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+        if (add_to_ir) {
+            ir.expressions.push_back({"", node_type::LIST, nested_exp.second});
         }
     } else if (parenthesesed_expression(add_to_ir)) {
-        /* if (add_to_ir > 0) {
+        /* if (add_to_ir) {
             // copied expression_tree on purpose to not invalidate the previous expression_tree by moving its ownership
             expression_tree et = ir.expressions.back();
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir == 2);
+            tmp_exp_tree.add_expression_to_ir(et, add_to_ir);
         } */
     } else {
         return false;

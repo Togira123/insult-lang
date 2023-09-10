@@ -5,13 +5,7 @@ struct temp_expr_tree {
     // true if the current body is enclosed in labeled with thanks statement
     bool thanks_flag = false;
     temp_expr_tree(std::vector<expression_tree>& ets, identifier_scopes** current_scope) : expressions(ets), cur_scope(current_scope) {}
-    void add_expression_to_ir(expression_tree& et, bool add_directly = false) {
-        if (add_directly) {
-            expressions.push_back(std::move(et));
-        } else {
-            tmp_exp_tree.push_back(std::move(et));
-        }
-    }
+    void add_expression_to_ir(expression_tree& et) { expressions.push_back(std::move(et)); }
     void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail, size_t function_info_ind = 0) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
         last_identifier = identifier;
@@ -69,7 +63,6 @@ struct temp_expr_tree {
         // also store the ind in case we have to delete later
         unary_op_indexes.push_back(ind);
     }
-    size_t last_exp_index() { return expressions.size() + tmp_exp_tree.size() - 1; }
     const std::string& last_identifier_added() { return last_identifier; }
     const std::pair<std::string&, size_t> last_assignment_added() { return {last_assignment, last_assignment_ind}; }
     // first bool is whether the whole thing went successfully
@@ -112,7 +105,6 @@ struct temp_expr_tree {
             array_access_indexes.pop_back();
         }
         expect_identifier_deletion = false;
-        tmp_exp_tree.clear();
         return {true, true};
     }
     bool accept_expressions() {
@@ -127,16 +119,10 @@ struct temp_expr_tree {
         unary_op_indexes.clear();
         list_indexes.clear();
         array_access_indexes.clear();
-        for (int i = 0; i < (int)tmp_exp_tree.size(); i++) {
-            expressions.push_back(std::move(tmp_exp_tree[i]));
-        }
-        tmp_exp_tree.clear();
         return true;
     }
 
 private:
-    // temporarily store expressions here until it is determined whether they are part of a please expression or not
-    std::vector<expression_tree> tmp_exp_tree;
     // references the expressions in the IR
     std::vector<expression_tree>& expressions;
     // pointer that points to the pointer pointing to current scope
