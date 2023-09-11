@@ -84,7 +84,7 @@ initialization_statement ::= (definition | definition_and_assignment | assignmen
 
 statement ::= iteration_statement | if_statement | jump_statement | function | expression_statement | initialization_statement
 
-function ::= ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), [":", datatype], body
+function ::= ["thanks"], "fun", identifier, "(", (")" | identifier, ":", data_type, {, ",", identifier, ":", data_type}, ")"), [":", data_type], body
 
 comment ::= single_line_comment | multi_line_comment
 
