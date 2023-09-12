@@ -5,7 +5,6 @@ struct temp_expr_tree {
     // true if the current body is enclosed in labeled with thanks statement
     bool thanks_flag = false;
     temp_expr_tree(std::vector<expression_tree>& ets, identifier_scopes** current_scope) : expressions(ets), cur_scope(current_scope) {}
-    void add_expression_to_ir(expression_tree& et) { expressions.push_back(std::move(et)); }
     void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail, size_t function_info_ind = 0) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
         last_identifier = identifier;

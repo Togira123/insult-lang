@@ -1178,13 +1178,7 @@ inline bool expression(int iteration, bool add_to_ir) {
         if (add_to_ir) {
             ir.expressions.push_back({"", node_type::LIST, nested_exp.second});
         }
-    } else if (parenthesesed_expression(add_to_ir)) {
-        /* if (add_to_ir) {
-            // copied expression_tree on purpose to not invalidate the previous expression_tree by moving its ownership
-            expression_tree et = ir.expressions.back();
-            tmp_exp_tree.add_expression_to_ir(et, add_to_ir);
-        } */
-    } else {
+    } else if (!parenthesesed_expression(add_to_ir)) {
         return false;
     }
     return true;
