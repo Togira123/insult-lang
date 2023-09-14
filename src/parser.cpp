@@ -416,7 +416,7 @@ std::pair<bool, identifier_scopes*> body(bool comes_from_for_loop_or_function = 
 
 bool while_statement() {
     int cur_ind = tokens.current_index();
-    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
         tmp_exp_tree.thanks_flag = true;
@@ -554,7 +554,7 @@ inline std::pair<bool, bool> evaluable() {
 
 bool for_statement() {
     int cur_ind = tokens.current_index();
-    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
         tmp_exp_tree.thanks_flag = true;
@@ -772,7 +772,7 @@ std::pair<bool, size_t> if_structure() {
 
 bool if_statement() {
     int cur_ind = tokens.current_index();
-    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tmp_exp_tree.thanks_flag = true;
         tokens.next();
@@ -885,7 +885,7 @@ inline bool jump_statement() { return break_statement() || return_statement() ||
 
 bool function_statement() {
     int cur_ind = tokens.current_index();
-    int prev_was_thanks = tmp_exp_tree.thanks_flag;
+    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
     bool went_out_of_scope = false;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
