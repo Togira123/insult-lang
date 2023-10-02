@@ -70,7 +70,7 @@ intermediate_representation ir({&ir}, {});
 
 identifier_scopes* current_scope = &ir.scopes;
 
-temp_expr_tree tmp_exp_tree(ir.expressions, &current_scope);
+temp_expr_tree tmp_exp_tree(&current_scope);
 
 inline bool is_identifier_or_constant(const token& t) {
     switch (t.name) {
@@ -298,7 +298,7 @@ inline std::pair<bool, int> list_expression() {
             return {true, cur_ind};
         }
         if (expression(0, true)) {
-            std::vector<size_t> args = {ir.expressions.size()};
+            std::vector<size_t> args = {ir.expressions.size() - 1};
             tokens.next();
             while (true) {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
@@ -310,7 +310,7 @@ inline std::pair<bool, int> list_expression() {
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                     tokens.next();
                     if (expression(0, true)) {
-                        args.push_back(ir.expressions.size());
+                        args.push_back(ir.expressions.size() - 1);
                         tokens.next();
                         continue;
                     }
@@ -428,7 +428,7 @@ bool while_statement() {
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
             if (expression(0, true)) {
-                int condition = ir.expressions.size();
+                int condition = ir.expressions.size() - 1;
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
@@ -482,10 +482,10 @@ bool assignment() {
         }
         tokens.next();
         ir.expressions.push_back(std::move(tree));
-        size_t ind = ir.expressions.size();
+        size_t ind = ir.expressions.size() - 1;
         if (partial_assignment()) {
-            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, ir.expressions.size(), ind);
-            // current_scope->assignments[identifier_name].push_back(ir.expressions.size());
+            tmp_exp_tree.add_assignment_to_cur_scope(identifier_name, ir.expressions.size() - 1, ind);
+            // current_scope->assignments[identifier_name].push_back(ir.expressions.size() - 1);
             return true;
         }
         tokens.previous();
@@ -511,8 +511,8 @@ bool definition_or_definition_and_assignment() {
                     tokens.next();
                     if (partial_assignment()) {
                         // definition and assignment
-                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)ir.expressions.size()});
-                        // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size(), true};
+                        tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {type, (int)ir.expressions.size() - 1});
+                        // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size() - 1, true};
                         return true;
                     } else {
                         tokens.previous();
@@ -523,8 +523,8 @@ bool definition_or_definition_and_assignment() {
                 }
             } else if (partial_assignment()) {
                 // definition and assignment
-                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)ir.expressions.size()});
-                // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size(), true};
+                tmp_exp_tree.add_identifier_to_cur_scope(identifier_name, {{}, (int)ir.expressions.size() - 1});
+                // current_scope->identifiers[identifier_name] = {{}, ir.expressions.size() - 1, true};
                 return true;
             }
         }
@@ -580,7 +580,7 @@ bool for_statement() {
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                 tokens.next();
                 if (expression(0, true)) {
-                    fss.condition = ir.expressions.size();
+                    fss.condition = ir.expressions.size() - 1;
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ";") {
                         tokens.next();
@@ -636,13 +636,13 @@ std::pair<std::string, int> function_call() {
                     tokens.next();
                     continue;
                 } else if (expression(0, true)) {
-                    calls.push_back({ir.expressions.size()});
+                    calls.push_back({ir.expressions.size() - 1});
                     tokens.next();
                     while (true) {
                         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ",") {
                             tokens.next();
                             if (expression(0, true)) {
-                                calls.push_back(ir.expressions.size());
+                                calls.push_back(ir.expressions.size() - 1);
                                 tokens.next();
                                 continue;
                             }
@@ -690,7 +690,7 @@ std::pair<std::string, int> array_access() {
             if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "[") {
                 tokens.next();
                 if (expression(0, true)) {
-                    args.push_back(ir.expressions.size());
+                    args.push_back(ir.expressions.size() - 1);
                     tokens.next();
                     if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "]") {
                         tokens.next();
@@ -732,7 +732,7 @@ std::pair<bool, size_t> if_structure() {
         if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == "(") {
             tokens.next();
             if (expression(0, true)) {
-                int condition = ir.expressions.size();
+                int condition = ir.expressions.size() - 1;
                 tokens.next();
                 if (tokens.current().name == token_type::PUNCTUATION && tokens.current().value == ")") {
                     tokens.next();
@@ -827,7 +827,7 @@ inline bool return_statement() {
                     }
                     return false;
                 }
-                ir.return_statements.push_back(ir.expressions.size());
+                ir.return_statements.push_back(ir.expressions.size() - 1);
                 current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
                 return true;
             }
@@ -846,7 +846,7 @@ inline bool return_statement() {
             }
             if (!p.second) {
                 // was actually accepted
-                ir.return_statements.push_back(ir.expressions.size());
+                ir.return_statements.push_back(ir.expressions.size() - 1);
                 current_scope->order.push_back({ir.return_statements.size() - 1, statement_type::RETURN});
                 tokens.previous();
                 return true;
@@ -1034,7 +1034,7 @@ inline bool expression_statement() {
             tokens.previous();
             if (!p.second) {
                 // was actually accepted
-                current_scope->order.push_back({ir.expressions.size(), statement_type::EXPRESSION});
+                current_scope->order.push_back({ir.expressions.size() - 1, statement_type::EXPRESSION});
             }
         } else {
             // expression has please, accept expressions
@@ -1044,7 +1044,7 @@ inline bool expression_statement() {
                 }
                 return false;
             }
-            current_scope->order.push_back({ir.expressions.size(), statement_type::EXPRESSION});
+            current_scope->order.push_back({ir.expressions.size() - 1, statement_type::EXPRESSION});
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement
                 std::queue<token*> token_queue;
@@ -1266,7 +1266,7 @@ int main(int argc, char* argv[]) {
             throw std::runtime_error("gcc is required on your system to compile this program");
         }
         std::filesystem::remove(tmp_file);
-        return 0;
+        return 1;
     }
     tokens.init(token_list);
     if (tokens.current().name == token_type::END_OF_INPUT) {
@@ -1287,7 +1287,7 @@ int main(int argc, char* argv[]) {
                     throw std::runtime_error("gcc is required on your system to compile this program");
                 }
                 std::filesystem::remove(tmp_file);
-                return 0;
+                return 1;
             }
             optimize(ir, flags.count(compiler_flag::OPTIMIZE));
             // check_ir(ir);

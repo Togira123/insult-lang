@@ -4,7 +4,7 @@ struct temp_expr_tree {
     // keeps track of functions or iterations/control flow statements labeled with thanks
     // true if the current body is enclosed in labeled with thanks statement
     bool thanks_flag = false;
-    temp_expr_tree(std::vector<expression_tree>& ets, identifier_scopes** current_scope) : expressions(ets), cur_scope(current_scope) {}
+    temp_expr_tree(identifier_scopes** current_scope) : cur_scope(current_scope) {}
     void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail, size_t function_info_ind = 0) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
         last_identifier = identifier;
@@ -122,8 +122,6 @@ struct temp_expr_tree {
     }
 
 private:
-    // references the expressions in the IR
-    std::vector<expression_tree>& expressions;
     // pointer that points to the pointer pointing to current scope
     identifier_scopes** cur_scope;
     // stores identifiers that were defined in that scope
