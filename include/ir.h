@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 // unknown is applied if no type can directly be found but it has the potential to be inferred later or used for arrays where the array type is not
 // clear (yet). VOID_TYPE is only used to describe functions that don't return anything
