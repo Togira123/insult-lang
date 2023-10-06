@@ -8,6 +8,7 @@ std::string& get_next_identifier_name() {
     // list from https://en.cppreference.com/w/cpp/keyword
     static const std::unordered_set<std::string> reserved_cpp_keywords = {
         "add_vectors", // needed in inslt std library
+        "main",        // prevent a regular function from being named "main"
         "alignas",
         "alignof",
         "and",
