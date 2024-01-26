@@ -27,3 +27,4 @@ add_test(NAME gridpath COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/gridpath.inslt 
 add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.inslt test_output_add_arrays)
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt test_output_multiline_strings)
+add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt test_output_function_definitions_everywhere)

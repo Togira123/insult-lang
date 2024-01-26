@@ -1,0 +1,16 @@
+def a = 3 please
+def b = 3.0 please
+def c = ["hello", "world"] please
+
+def d = f(e(1, 2, 3)) please
+
+fun e(x: int, y: int, z: int) {
+    return [[x, y], [z]] please
+}
+
+print(a) please
+
+thanks fun f(x: int[][]) {
+    print(x[0][0])
+    return "test"
+}
