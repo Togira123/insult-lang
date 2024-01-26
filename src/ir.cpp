@@ -4,7 +4,7 @@
 
 bool function_returns_in_all_paths(identifier_scopes* cur_scope);
 
-void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid_library_names_flag);
+void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid_library_names_flag, function_detail* fd = nullptr);
 
 full_type evaluate_expression(identifier_scopes* cur_scope, int this_exp_ind, int exp_ind, bool has_forbid_library_names_flag,
                               full_type type_assigned_to);
@@ -182,11 +182,12 @@ full_type evaluate_expression_recursive(identifier_scopes* cur_scope, expression
     }
 }
 
-void check_function_body(identifier_scopes* body, bool has_forbid_library_names_flag) {
+void check_function_body(function_detail& fd, bool has_forbid_library_names_flag) {
     static std::unordered_set<identifier_scopes*> checked;
+    identifier_scopes* body = fd.body;
     if (checked.count(body) == 0) {
         for (size_t order_index = 0; order_index < body->order.size(); order_index++) {
-            check_statement(body, order_index, has_forbid_library_names_flag);
+            check_statement(body, order_index, has_forbid_library_names_flag, &fd);
         }
         checked.insert(body);
     }
@@ -245,7 +246,7 @@ full_type& validate_function_call(identifier_scopes* cur_scope, int function_cal
             // then mark as checked to not double check later on
             if (fd.return_type.type == types::UNKNOWN_TYPE) {
                 // this also sets the return type of the function
-                check_function_body(fd.body, has_forbid_library_names_flag);
+                check_function_body(fd, has_forbid_library_names_flag);
                 if (fd.return_type.type == types::UNKNOWN_TYPE) {
                     fd.return_type = {types::VOID_TYPE};
                 }
@@ -281,7 +282,7 @@ full_type& validate_function_call(identifier_scopes* cur_scope, int function_cal
         // then mark as checked to not double check later on
         if (fd.return_type.type == types::UNKNOWN_TYPE) {
             // this also sets the return type of the function
-            check_function_body(fd.body, has_forbid_library_names_flag);
+            check_function_body(fd, has_forbid_library_names_flag);
             if (fd.return_type.type == types::UNKNOWN_TYPE) {
                 fd.return_type = {types::VOID_TYPE};
             }
@@ -427,7 +428,7 @@ void validate_definition(identifier_scopes* cur_scope, identifier_detail& id, in
     id.already_defined = true;
 }
 
-void handle_for_statement(for_statement_struct& for_statement, size_t index, bool has_forbid_library_names_flag) {
+void handle_for_statement(for_statement_struct& for_statement, size_t index, bool has_forbid_library_names_flag, function_detail* fd) {
     auto* const scope = for_statement.body;
     if (for_statement.init_statement != "") {
         // check whether definition/assignment is okay
@@ -455,11 +456,11 @@ void handle_for_statement(for_statement_struct& for_statement, size_t index, boo
     auto& order = scope->order;
     // check body
     for (size_t order_index = 0; order_index < order.size(); order_index++) {
-        check_statement(scope, order_index, has_forbid_library_names_flag);
+        check_statement(scope, order_index, has_forbid_library_names_flag, fd);
     }
 }
 
-void handle_while_statement(while_statement_struct& while_statement, bool has_forbid_library_names_flag) {
+void handle_while_statement(while_statement_struct& while_statement, bool has_forbid_library_names_flag, function_detail* fd) {
     auto* const scope = while_statement.body;
     // make sure condition is a bool value
     if (!evaluate_expression(&scope->get_upper(), while_statement.condition, while_statement.condition, has_forbid_library_names_flag)
@@ -468,11 +469,11 @@ void handle_while_statement(while_statement_struct& while_statement, bool has_fo
     }
     // check body
     for (size_t order_index = 0; order_index < scope->order.size(); order_index++) {
-        check_statement(scope, order_index, has_forbid_library_names_flag);
+        check_statement(scope, order_index, has_forbid_library_names_flag, fd);
     }
 }
 
-void handle_if_statement(if_statement_struct& if_statement, bool has_forbid_library_names_flag) {
+void handle_if_statement(if_statement_struct& if_statement, bool has_forbid_library_names_flag, function_detail* fd) {
     auto* const scope = if_statement.body;
     static auto& ir = *scope->get_ir();
     // make sure condition is a bool value
@@ -482,13 +483,13 @@ void handle_if_statement(if_statement_struct& if_statement, bool has_forbid_libr
     }
     // check body
     for (size_t order_index = 0; order_index < scope->order.size(); order_index++) {
-        check_statement(scope, order_index, has_forbid_library_names_flag);
+        check_statement(scope, order_index, has_forbid_library_names_flag, fd);
     }
     if (if_statement.else_if >= 0) {
-        handle_if_statement(ir.if_statements[if_statement.else_if], has_forbid_library_names_flag);
+        handle_if_statement(ir.if_statements[if_statement.else_if], has_forbid_library_names_flag, fd);
     } else if (if_statement.else_body != nullptr) {
         for (size_t order_index = 0; order_index < if_statement.else_body->order.size(); order_index++) {
-            check_statement(if_statement.else_body, order_index, has_forbid_library_names_flag);
+            check_statement(if_statement.else_body, order_index, has_forbid_library_names_flag, fd);
         }
     }
 }
@@ -557,7 +558,7 @@ void handle_function(function_detail& fd, std::string& function_name, int order_
     if (fd.body->level != 1) {
         throw std::runtime_error("functions must be defined in global scope");
     }
-    check_function_body(fd.body, has_forbid_library_names_flag);
+    check_function_body(fd, has_forbid_library_names_flag);
     if (fd.return_type.type == types::UNKNOWN_TYPE) {
         fd.return_type = {types::VOID_TYPE};
     }
@@ -616,24 +617,23 @@ void handle_assignment(identifier_scopes* scope, std::string& name, int index, i
     }
 }
 
-void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid_library_names_flag) {
-    static int last_func_index = -1;
+void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid_library_names_flag, function_detail* fd) {
     static int in_loop = 0;
     static intermediate_representation& ir = *cur->get_ir();
     auto& cur_statement = cur->order[order_index];
     switch (cur_statement.type) {
     case statement_type::FOR:
         in_loop++;
-        handle_for_statement(ir.for_statements[cur_statement.index], cur_statement.index, has_forbid_library_names_flag);
+        handle_for_statement(ir.for_statements[cur_statement.index], cur_statement.index, has_forbid_library_names_flag, fd);
         in_loop--;
         break;
     case statement_type::WHILE:
         in_loop++;
-        handle_while_statement(ir.while_statements[cur_statement.index], has_forbid_library_names_flag);
+        handle_while_statement(ir.while_statements[cur_statement.index], has_forbid_library_names_flag, fd);
         in_loop--;
         break;
     case statement_type::IF:
-        handle_if_statement(ir.if_statements[cur_statement.index], has_forbid_library_names_flag);
+        handle_if_statement(ir.if_statements[cur_statement.index], has_forbid_library_names_flag, fd);
         break;
     case statement_type::BREAK:
     case statement_type::CONTINUE:
@@ -642,16 +642,13 @@ void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid
         }
         break;
     case statement_type::RETURN:
-        if (last_func_index == -1) {
+        if (fd == nullptr) {
             throw std::runtime_error("can only return inside function body");
         }
-        handle_return_statement(ir.function_info[last_func_index], cur_statement.index, has_forbid_library_names_flag);
+        handle_return_statement(*fd, cur_statement.index, has_forbid_library_names_flag);
         break;
     case statement_type::FUNCTION: {
-        int prev_value = last_func_index;
-        last_func_index = cur_statement.index;
         handle_function(ir.function_info[cur_statement.index], cur_statement.identifier_name, order_index, has_forbid_library_names_flag);
-        last_func_index = prev_value;
         break;
     }
     case statement_type::ASSIGNMENT:
