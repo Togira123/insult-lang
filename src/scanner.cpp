@@ -250,14 +250,20 @@ std::string logical_operator(std::vector<char>& buffer, int& index, int& fence) 
 std::string logical_not(std::vector<char>& buffer, int& index) { return (cur_char(buffer, index) == '!') ? "!" : ""; }
 
 std::pair<bool, std::string> string_token(std::vector<char>& buffer, int& index, int& fence) {
-    if (cur_char(buffer, index) != '"') {
+    char start_char = cur_char(buffer, index);
+    if (start_char != '"' && start_char != '\'') {
         return {false, ""};
     }
     char c = next_char(buffer, index, fence);
     std::string result = "";
     bool ignore_next = false;
     size_t last_escaping_back_slash = 0;
-    while (c != EOF && (c != '"' || ignore_next)) {
+    while (c != EOF && (c != start_char || ignore_next)) {
+        if (!ignore_next && c == '"') {
+            result += "\\\"";
+            c = next_char(buffer, index, fence);
+            continue;
+        }
         if (c == '\\' && !ignore_next) {
             last_escaping_back_slash = result.length();
             ignore_next = true;
