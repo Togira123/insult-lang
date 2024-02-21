@@ -28,3 +28,14 @@ add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.in
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt test_output_multiline_strings)
 add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt test_output_function_definitions_everywhere)
+
+add_test(NAME solution_1.2_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_1.inslt test_output_solution_1.2_1)
+add_test(NAME solution_1.2_2 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_2.inslt test_output_solution_1.2_2)
+add_test(NAME solution_1.2_3 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_3.inslt test_output_solution_1.2_3)
+add_test(NAME solution_1.2_4 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_4.inslt test_output_solution_1.2_4)
+add_test(NAME solution_1.2_5 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_5.inslt test_output_solution_1.2_5)
+
+set_property(TEST solution_1.2_2 PROPERTY WILL_FAIL TRUE)
+set_property(TEST solution_1.2_3 PROPERTY WILL_FAIL TRUE)
+set_property(TEST solution_1.2_4 PROPERTY WILL_FAIL TRUE)
+set_property(TEST solution_1.2_5 PROPERTY WILL_FAIL TRUE)
