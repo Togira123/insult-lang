@@ -1220,6 +1220,7 @@ int main(int argc, char* argv[]) {
                     throw std::runtime_error("flag \"" + std::string(argv[i - 1] + 1) + "\" expected argument");
                 }
                 last_flag = string_to_compiler_flag(argv[i] + 1);
+                flags[last_flag] = "";
             } catch (std::runtime_error& e) {
                 std::cerr << e.what() << std::endl;
                 return 1;
