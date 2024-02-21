@@ -1219,9 +1219,7 @@ int main(int argc, char* argv[]) {
                 if (flag_requires_argument(last_flag)) {
                     throw std::runtime_error("flag \"" + std::string(argv[i - 1] + 1) + "\" expected argument");
                 }
-                auto flag = string_to_compiler_flag(argv[i] + 1);
-                flags[std::move(flag)] = "";
-                last_flag = flag;
+                last_flag = string_to_compiler_flag(argv[i] + 1);
             } catch (std::runtime_error& e) {
                 std::cerr << e.what() << std::endl;
                 return 1;
