@@ -138,11 +138,42 @@ std::string integer(std::vector<char>& buffer, int& index, int& fence) {
         return "";
     }
     std::string result = "";
+    int ind = index;
+    bool success = true;
+    int digits_processed = 1;
+    int last_separator = -1;
     result += cur_char(buffer, index);
     char c = next_char(buffer, index, fence);
-    while (c >= '0' && c <= '9') {
-        result += c;
+    while ((c >= '0' && c <= '9') || c == '\'') {
+        if (c == '\'') {
+            if (last_separator == -1) {
+                // make sure there haven't been more than 3 digits processed already
+                if (digits_processed > 3) {
+                    success = false;
+                    break;
+                }
+                // make sure there are exactly 3 digits between the last separator and the current one
+            } else if (digits_processed - last_separator != 3) {
+                success = false;
+                break;
+            }
+            last_separator = digits_processed;
+        } else {
+            result += c;
+            digits_processed++;
+            if (last_separator != -1 && digits_processed - last_separator > 3) {
+                // there should've been a separator before the current digit
+                success = false;
+                break;
+            }
+        }
         c = next_char(buffer, index, fence);
+    }
+    if ((last_separator != -1 && digits_processed - last_separator != 3) || !success) {
+        while (ind < index) {
+            rollback(index, fence);
+        }
+        return "";
     }
     rollback(index, fence);
     return result;
@@ -150,12 +181,13 @@ std::string integer(std::vector<char>& buffer, int& index, int& fence) {
 
 std::string double_token(std::vector<char>& buffer, int& index, int& fence) {
     std::string result = "";
+    int ind = index;
     if ((result = integer(buffer, index, fence)) == "") {
         return "";
     }
     char c = next_char(buffer, index, fence);
     if (c != '.') {
-        for (int i = 0; i < (int)result.length(); i++) {
+        while (ind < index) {
             rollback(index, fence);
         }
         return "";
@@ -163,7 +195,7 @@ std::string double_token(std::vector<char>& buffer, int& index, int& fence) {
     result += ".";
     c = next_char(buffer, index, fence);
     if (c < '0' || c > '9') {
-        for (int i = 0; i < (int)result.length() + 1; i++) {
+        while (ind < index) {
             rollback(index, fence);
         }
         return "";
