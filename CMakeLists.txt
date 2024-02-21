@@ -28,3 +28,10 @@ add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.in
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt test_output_multiline_strings)
 add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt test_output_function_definitions_everywhere)
+
+add_test(NAME solution_1.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_1.inslt test_output_solution_1.1_1)
+add_test(NAME solution_1.1_2 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_2.inslt test_output_solution_1.1_2)
+add_test(NAME solution_1.1_3 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_3.inslt test_output_solution_1.1_3)
+
+set_property(TEST solution_1.1_2 PROPERTY WILL_FAIL TRUE)
+set_property(TEST solution_1.1_3 PROPERTY WILL_FAIL TRUE)
