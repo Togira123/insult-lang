@@ -4,6 +4,7 @@
 #include "../include/optimize.h"
 #include "../include/scanner.h"
 #include <chrono>
+#include <climits>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -416,12 +417,10 @@ std::pair<bool, identifier_scopes*> body(bool comes_from_for_loop_or_function = 
 
 bool while_statement() {
     int cur_ind = tokens.current_index();
-    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
+    int prev_thanks_flag = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
-        tmp_exp_tree.thanks_flag = true;
-    } else {
-        tmp_exp_tree.thanks_flag = false;
+        tmp_exp_tree.thanks_flag++;
     }
     if (tokens.current().name == token_type::ITERATION && tokens.current().value == "while") {
         tokens.next();
@@ -436,7 +435,7 @@ bool while_statement() {
                     if (tmp_exp_tree.accept_expressions() && (p = body()).first) {
                         ir.while_statements.push_back({condition, p.second});
                         // leaving while loop, set thanks_flag to previous value
-                        tmp_exp_tree.thanks_flag = prev_was_thanks;
+                        tmp_exp_tree.thanks_flag = prev_thanks_flag;
                         return true;
                     }
                 }
@@ -447,7 +446,7 @@ bool while_statement() {
         tokens.previous();
     }
     // leaving while loop, set thanks_function_flag to previous value
-    tmp_exp_tree.thanks_flag = prev_was_thanks;
+    tmp_exp_tree.thanks_flag = prev_thanks_flag;
     return false;
 }
 
@@ -554,12 +553,10 @@ inline std::pair<bool, bool> evaluable() {
 
 bool for_statement() {
     int cur_ind = tokens.current_index();
-    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
+    int prev_thanks_flag = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
-        tmp_exp_tree.thanks_flag = true;
-    } else {
-        tmp_exp_tree.thanks_flag = false;
+        tmp_exp_tree.thanks_flag++;
     }
     if (tokens.current().name == token_type::ITERATION && tokens.current().value == "for") {
         tokens.next();
@@ -598,7 +595,7 @@ bool for_statement() {
                                     ir.for_statements.push_back(std::move(fss));
                                     current_scope = current_scope->upper_scope();
                                     // leaving for loop, set thanks_flag to previous value
-                                    tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                    tmp_exp_tree.thanks_flag = prev_thanks_flag;
                                     return true;
                                 }
                             }
@@ -616,7 +613,7 @@ bool for_statement() {
         tokens.previous();
     }
     // leaving for loop, set thanks_function_flag to previous value
-    tmp_exp_tree.thanks_flag = prev_was_thanks;
+    tmp_exp_tree.thanks_flag = prev_thanks_flag;
     return false;
 }
 
@@ -772,25 +769,23 @@ std::pair<bool, size_t> if_structure() {
 
 bool if_statement() {
     int cur_ind = tokens.current_index();
-    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
+    int prev_thanks_flag = tmp_exp_tree.thanks_flag;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
-        tmp_exp_tree.thanks_flag = true;
+        tmp_exp_tree.thanks_flag++;
         tokens.next();
-    } else {
-        tmp_exp_tree.thanks_flag = false;
     }
     std::pair<bool, size_t> p;
     if ((p = if_structure()).first) {
         current_scope->order.push_back({p.second, statement_type::IF});
         // leaving if statement, set thanks_flag to previous value
-        tmp_exp_tree.thanks_flag = prev_was_thanks;
+        tmp_exp_tree.thanks_flag = prev_thanks_flag;
         return true;
     }
     while (cur_ind < tokens.current_index()) {
         tokens.previous();
     }
     // leaving if statement, set thanks_flag to previous value
-    tmp_exp_tree.thanks_flag = prev_was_thanks;
+    tmp_exp_tree.thanks_flag = prev_thanks_flag;
     return false;
 }
 
@@ -885,13 +880,11 @@ inline bool jump_statement() { return break_statement() || return_statement() ||
 
 bool function_statement() {
     int cur_ind = tokens.current_index();
-    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
+    int prev_thanks_flag = tmp_exp_tree.thanks_flag;
     bool went_out_of_scope = false;
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
         tokens.next();
-        tmp_exp_tree.thanks_flag = true;
-    } else {
-        tmp_exp_tree.thanks_flag = false;
+        tmp_exp_tree.thanks_flag++;
     }
 
     if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "fun") {
@@ -910,25 +903,25 @@ bool function_statement() {
                             full_type return_type = full_type::to_type(tokens.current().value);
                             tokens.next();
                             if ((p = body()).first) {
-                                ir.function_info.push_back({return_type, {}, tmp_exp_tree.thanks_flag, p.second});
+                                ir.function_info.push_back({return_type, {}, tmp_exp_tree.thanks_flag != 0, p.second});
                                 tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
                                                                          ir.function_info.size() - 1);
                                 if (tmp_exp_tree.accept_expressions()) {
                                     current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
                                     // leaving function, set thanks_function_flag to previous value
-                                    tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                    tmp_exp_tree.thanks_flag = prev_thanks_flag;
                                     return true;
                                 }
                             }
                         }
                     } else if ((p = body()).first) {
-                        ir.function_info.push_back({{}, {}, tmp_exp_tree.thanks_flag, p.second});
+                        ir.function_info.push_back({{}, {}, tmp_exp_tree.thanks_flag != 0, p.second});
                         tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
                                                                  ir.function_info.size() - 1);
                         if (tmp_exp_tree.accept_expressions()) {
                             current_scope->order.push_back({ir.function_info.size() - 1, statement_type::FUNCTION, function_name});
                             // leaving function, set thanks_function_flag to previous value
-                            tmp_exp_tree.thanks_flag = prev_was_thanks;
+                            tmp_exp_tree.thanks_flag = prev_thanks_flag;
                             return true;
                         }
                     }
@@ -980,8 +973,8 @@ bool function_statement() {
                                         }
                                     }
                                     if (tmp_exp_tree.accept_expressions() && body(true).first) {
-                                        ir.function_info[function_info_ind] = {std::move(return_type), std::move(params), tmp_exp_tree.thanks_flag,
-                                                                               current_scope};
+                                        ir.function_info[function_info_ind] = {std::move(return_type), std::move(params),
+                                                                               tmp_exp_tree.thanks_flag != 0, current_scope};
                                         current_scope = current_scope->upper_scope();
                                         went_out_of_scope = true;
                                         tmp_exp_tree.add_identifier_to_cur_scope(function_name, {{types::FUNCTION_TYPE, types::UNKNOWN_TYPE, 0}, -1},
@@ -989,7 +982,7 @@ bool function_statement() {
                                         if (tmp_exp_tree.accept_expressions()) {
                                             current_scope->order.push_back({function_info_ind, statement_type::FUNCTION, function_name});
                                             // leaving function, set thanks_function_flag to previous value
-                                            tmp_exp_tree.thanks_flag = prev_was_thanks;
+                                            tmp_exp_tree.thanks_flag = prev_thanks_flag;
                                             return true;
                                         }
                                         break;
@@ -1013,7 +1006,7 @@ bool function_statement() {
     // no need to check for return value since we're returning false anyway
     tmp_exp_tree.discard_expressions(true);
     // leaving function, set thanks_function_flag to previous value
-    tmp_exp_tree.thanks_flag = prev_was_thanks;
+    tmp_exp_tree.thanks_flag = prev_thanks_flag;
     return false;
 }
 
@@ -1047,15 +1040,22 @@ inline bool expression_statement() {
             current_scope->order.push_back({ir.expressions.size() - 1, statement_type::EXPRESSION});
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement
-                std::queue<token*> token_queue;
+                std::vector<token*> tokens_to_repeat(tokens.current_index() - cur_ind);
                 // only "<" and not "<=" to not repeat the "please" and have an infinite loop
                 for (int i = cur_ind; i < tokens.current_index(); i++) {
-                    token_queue.push(&(*it++));
+                    tokens_to_repeat[i - cur_ind] = &(*it++);
                 }
-                tokens.insert_at(++it, {token_type::NEWLINE, "\n"});
-                while (!token_queue.empty()) {
-                    tokens.insert_at(it, *token_queue.front());
-                    token_queue.pop();
+                // shifting would cause an overflow
+                if ((int)(sizeof(size_t) * CHAR_BIT) <= tmp_exp_tree.thanks_flag) {
+                    throw std::runtime_error("too many nested thanks blocks");
+                }
+                size_t repetitions = (1 << tmp_exp_tree.thanks_flag) - 1;
+                it++;
+                for (size_t i = 0; i < repetitions; i++) {
+                    tokens.insert_at(it, {token_type::NEWLINE, "\n"});
+                    for (auto& t : tokens_to_repeat) {
+                        tokens.insert_at(it, *t);
+                    }
                 }
             }
         }
@@ -1108,15 +1108,22 @@ inline bool initialization_statement() {
             }
             if (tmp_exp_tree.thanks_flag) {
                 // has thanks but still please, repeat statement
-                std::queue<token*> token_queue;
+                std::vector<token*> tokens_to_repeat(tokens.current_index() - cur_ind);
                 // only "<" and not "<=" to not repeat the "please" and have an infinite loop
                 for (int i = cur_ind; i < tokens.current_index(); i++) {
-                    token_queue.push(&(*it++));
+                    tokens_to_repeat[i - cur_ind] = &(*it++);
                 }
-                tokens.insert_at(++it, {token_type::NEWLINE, "\n"});
-                while (!token_queue.empty()) {
-                    tokens.insert_at(it, *token_queue.front());
-                    token_queue.pop();
+                // shifting would cause an overflow
+                if ((int)(sizeof(size_t) * CHAR_BIT) <= tmp_exp_tree.thanks_flag) {
+                    throw std::runtime_error("too many nested thanks blocks");
+                }
+                size_t repetitions = (1 << tmp_exp_tree.thanks_flag) - 1;
+                it++;
+                for (size_t i = 0; i < repetitions; i++) {
+                    tokens.insert_at(it, {token_type::NEWLINE, "\n"});
+                    for (auto& t : tokens_to_repeat) {
+                        tokens.insert_at(it, *t);
+                    }
                 }
             }
         }
@@ -1274,7 +1281,23 @@ int main(int argc, char* argv[]) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("input file is empty");
     }
-    if (program()) {
+
+    bool valid_program = false;
+    try {
+        valid_program = program();
+    } catch (std::runtime_error& e) {
+        // may throw if nesting of thanks blocks causes an overflow to the number of repetitions to be made for a statement followed by "please"
+        outstream << get_random_program();
+        outstream.close();
+        if (std::system(("g++ -Wall -o " + output_file + " -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
+            std::filesystem::remove(tmp_file);
+            throw std::runtime_error("gcc is required on your system to compile this program");
+        }
+        std::filesystem::remove(tmp_file);
+        return 1;
+    }
+
+    if (valid_program) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
             try {
                 check_ir(ir, flags);

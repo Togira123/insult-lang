@@ -2,8 +2,8 @@
 
 struct temp_expr_tree {
     // keeps track of functions or iterations/control flow statements labeled with thanks
-    // true if the current body is enclosed in labeled with thanks statement
-    bool thanks_flag = false;
+    // its value corresponds to the number of thanks encapsulating the scope
+    int thanks_flag = 0;
     temp_expr_tree(identifier_scopes** current_scope) : cur_scope(current_scope) {}
     void add_identifier_to_cur_scope(const std::string& identifier, identifier_detail detail, size_t function_info_ind = 0) {
         added_function_info = detail.type.type == types::FUNCTION_TYPE;
