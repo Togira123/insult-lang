@@ -635,6 +635,11 @@ void check_statement(identifier_scopes* cur, size_t order_index, bool has_forbid
     case statement_type::IF:
         handle_if_statement(ir.if_statements[cur_statement.index], has_forbid_library_names_flag, fd);
         break;
+    case statement_type::THANKS_BLOCK:
+        for (size_t order_index = 0; order_index < ir.thanks_blocks[cur_statement.index]->order.size(); order_index++) {
+            check_statement(ir.thanks_blocks[cur_statement.index], order_index, has_forbid_library_names_flag, fd);
+        }
+        break;
     case statement_type::BREAK:
     case statement_type::CONTINUE:
         if (in_loop == 0) {

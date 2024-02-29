@@ -324,6 +324,14 @@ std::string generate_function_definitions(intermediate_representation& ir, size_
     return result;
 }
 
+std::string generate_thanks_block(identifier_scopes* thanks_block_body) {
+    std::string result = "";
+    for (size_t order_index = 0; order_index < thanks_block_body->order.size(); order_index++) {
+        result += generate_statement(thanks_block_body, order_index);
+    }
+    return result;
+}
+
 std::string generate_statement(identifier_scopes* cur, size_t order_index) {
     static auto& ir = *cur->get_ir();
     auto& cur_statement = cur->order[order_index];
@@ -338,6 +346,8 @@ std::string generate_statement(identifier_scopes* cur, size_t order_index) {
         return offset + generate_while_loop(ir.while_statements[cur_statement.index]);
     case statement_type::IF:
         return offset + generate_if_statement(ir.if_statements[cur_statement.index]);
+    case statement_type::THANKS_BLOCK:
+        return offset + generate_thanks_block(ir.thanks_blocks[cur_statement.index]);
     case statement_type::BREAK:
         return offset + "break;\n";
     case statement_type::CONTINUE:

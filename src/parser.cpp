@@ -1128,9 +1128,32 @@ inline bool initialization_statement() {
     return false;
 }
 
+bool thanks_block() {
+    int cur_ind = tokens.current_index();
+    bool prev_was_thanks = tmp_exp_tree.thanks_flag;
+    if (tokens.current().name == token_type::GENERAL_KEYWORD && tokens.current().value == "thanks") {
+        tmp_exp_tree.thanks_flag = true;
+        tokens.next();
+        std::pair<bool, identifier_scopes*> p;
+        if (tmp_exp_tree.accept_expressions() && (p = body()).first) {
+            ir.thanks_blocks.push_back(p.second);
+            current_scope->order.push_back({ir.thanks_blocks.size() - 1, statement_type::THANKS_BLOCK});
+            // leaving thanks block, set thanks_flag to previous value
+            tmp_exp_tree.thanks_flag = prev_was_thanks;
+            return true;
+        }
+    }
+    while (cur_ind < tokens.current_index()) {
+        tokens.previous();
+    }
+    // leaving thanks block, set thanks_flag to previous value
+    tmp_exp_tree.thanks_flag = prev_was_thanks;
+    return false;
+}
+
 inline bool statement() {
     return iteration_statement() || if_statement() || jump_statement() || function_statement() || initialization_statement() ||
-           expression_statement();
+           expression_statement() || thanks_block();
 }
 
 inline bool expression(int iteration, bool add_to_ir) {

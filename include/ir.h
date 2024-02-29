@@ -14,7 +14,7 @@ enum class types { BOOL_TYPE, DOUBLE_TYPE, INT_TYPE, STRING_TYPE, VOID_TYPE, FUN
 
 enum class node_type { IDENTIFIER, PUNCTUATION, OPERATOR, INT, DOUBLE, BOOL, STRING, FUNCTION_CALL, ARRAY_ACCESS, LIST };
 
-enum class statement_type { FOR, WHILE, IF, BREAK, CONTINUE, RETURN, FUNCTION, ASSIGNMENT, INITIALIZATION, EXPRESSION };
+enum class statement_type { FOR, WHILE, IF, BREAK, CONTINUE, RETURN, FUNCTION, ASSIGNMENT, INITIALIZATION, EXPRESSION, THANKS_BLOCK };
 
 struct function_detail;
 
@@ -334,6 +334,8 @@ struct intermediate_representation {
     std::vector<while_statement_struct> while_statements;
     // stores for statements that appear across all source code
     std::vector<for_statement_struct> for_statements;
+    // stores references to the bodies of thanks blocks that appear across all source code
+    std::vector<identifier_scopes*> thanks_blocks;
     // stores return statements that appear across all source code
     // the value represents the index of the expression involved in the return statement (or some negative value if no expression was used)
     std::vector<int> return_statements;
