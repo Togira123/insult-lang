@@ -28,3 +28,14 @@ add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.in
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt -out test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt -out test_output_multiline_strings)
 add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt -out test_output_function_definitions_everywhere)
+
+add_executable(test_output ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/test.cpp)
+add_test(NAME solution_3.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/solution_3.1_1.inslt -out test_output_solution_3.1_1)
+set_tests_properties(solution_3.1_1 PROPERTIES FIXTURES_SETUP exe_3.1_1)
+
+add_test(
+    NAME output_test_solution_3.1_1
+    COMMAND test_output ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/expected_output_3.1_1.txt test_output_solution_3.1_1 test_output_solution_3.1_1.txt
+    DEPENDS solution_3.1_1
+)
+set_tests_properties(output_test_solution_3.1_1 PROPERTIES FIXTURES_REQUIRED exe_3.1_1)
