@@ -84,7 +84,7 @@ struct temp_expr_tree {
             identifier_names.pop_back();
         }
         for (int i = assignments.size() - 1; i >= 0; i--) {
-            (*cur_scope)->assignments.erase(assignments[i]);
+            (*cur_scope)->assignments[assignments[i]].pop_back();
             assignments.pop_back();
         }
         for (int i = function_calls.size() - 1; i >= 0; i--) {
