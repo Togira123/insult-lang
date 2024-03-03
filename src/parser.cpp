@@ -4,6 +4,7 @@
 #include "../include/optimize.h"
 #include "../include/scanner.h"
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <list>

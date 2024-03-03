@@ -3,6 +3,8 @@
 #include "util.h"
 #include <deque>
 #include <list>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
