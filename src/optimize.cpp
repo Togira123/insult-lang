@@ -1,5 +1,6 @@
 #include "../include/optimize.h"
 #include "../include/lib/library.h"
+#include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
