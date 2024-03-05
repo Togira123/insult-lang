@@ -1,0 +1,2 @@
+// this should fail
+def n1 = 100'000.123'456 please

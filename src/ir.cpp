@@ -546,6 +546,7 @@ bool function_returns_in_all_paths(identifier_scopes* cur_scope) {
                 // all possible if statements return so there's no point in looking further
                 return true;
             }
+            break;
         case statement_type::RETURN:
             return true;
         default:
