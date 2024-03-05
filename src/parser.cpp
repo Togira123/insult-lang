@@ -4,6 +4,7 @@
 #include "../include/optimize.h"
 #include "../include/scanner.h"
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -111,6 +112,8 @@ inline node_type token_type_to_node_type(const token_type& type) {
     case token_type::COMMENT:
     case token_type::END_OF_INPUT:
         throw std::runtime_error("unable to convert <token_type> to <node_type>");
+    default:
+        throw std::runtime_error("unknown token type");
     }
 }
 
@@ -1220,6 +1223,7 @@ int main(int argc, char* argv[]) {
                     throw std::runtime_error("flag \"" + std::string(argv[i - 1] + 1) + "\" expected argument");
                 }
                 last_flag = string_to_compiler_flag(argv[i] + 1);
+                flags[last_flag] = "";
             } catch (std::runtime_error& e) {
                 std::cerr << e.what() << std::endl;
                 return 1;
@@ -1273,6 +1277,7 @@ int main(int argc, char* argv[]) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("input file is empty");
     }
+    int return_code = 0;
     if (program()) {
         if (tokens.next().name == token_type::END_OF_INPUT) {
             try {
@@ -1292,9 +1297,11 @@ int main(int argc, char* argv[]) {
             outstream << generate_code(ir);
         } else {
             outstream << get_random_program();
+            return_code = 1;
         }
     } else {
         outstream << get_random_program();
+        return_code = 1;
     }
     outstream.close();
     if (std::system(("g++ -w -o " + output_file + " -D_GLIBCXX_DEBUG -x c++ -std=c++17 " + tmp_file).c_str()) != 0) {
@@ -1302,4 +1309,5 @@ int main(int argc, char* argv[]) {
         throw std::runtime_error("gcc is required on your system to compile this program");
     }
     std::filesystem::remove(tmp_file);
+    return return_code;
 }

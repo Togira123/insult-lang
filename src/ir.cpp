@@ -58,6 +58,9 @@ identifier_detail& get_identifier_definition(identifier_scopes* cur_scope, std::
             // check if it's a std library name
             auto& id = identifier_detail_of(ir, name, type_assigned_to, func_call);
             ir.library_func_scopes.identifiers[name].references.insert(exp_ind);
+            if (!ir.has_arrays && (name == "size" || name == "array" || name == "push" || name == "pop")) {
+                ir.has_arrays = true;
+            }
             return id;
         } else {
             cur_scope = cur_scope->upper_scope();
@@ -543,6 +546,7 @@ bool function_returns_in_all_paths(identifier_scopes* cur_scope) {
                 // all possible if statements return so there's no point in looking further
                 return true;
             }
+            break;
         case statement_type::RETURN:
             return true;
         default:
