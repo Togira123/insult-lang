@@ -1,0 +1,33 @@
+// test normal strings
+def s1 = "simple string" please
+def s2 = "multi
+line
+string" please
+def s3 = "multiline but also has \
+backslash\\es
+like this\\" please
+
+print(s1) please
+print(s2) please
+print(s3) please
+
+// test new strings
+def s4 = 'simple string' please
+def s5 = 'multi
+line
+string' please
+def s6 = 'multiline but also has \
+backslash\\es
+like this\\' please
+
+print(s1 + s4) please
+print(s2 + s5) please
+print(s3 + s6) please
+
+
+def s7 = "escaped\"string" please
+def s8 = 'escaped\'string' please
+def s9 = "escaped\nstring" please
+def s10 = 'escaped\nstring' please
+def s11 = 'some"string' please
+def s12 = 'some\"string' please

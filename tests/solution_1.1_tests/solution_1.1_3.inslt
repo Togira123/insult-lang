@@ -1,0 +1,2 @@
+// this should fail
+def wrong_string = 'hello world" please

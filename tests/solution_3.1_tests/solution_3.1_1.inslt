@@ -1,0 +1,32 @@
+def a = [0, 0, 0, 0, 0, 0, 0, 0] please
+thanks {
+    if (true) {
+        a[0] = a[0] + 1 please
+        a[1] = a[1] + 1
+    }
+    thanks if (true) {
+        a[2] = a[2] + 1 please
+    }
+    def b = 0
+    thanks {
+        def b = 1
+        a[3] = b please
+    }
+    c()
+    d()
+    d() please
+    thanks for (def i = 0; i < size(a); i = i + 1) {
+        // 1, 0, 2, 1, 2, 1, 6, 3
+        print(a[i])
+    }
+}
+fun c() {
+    thanks {
+        a[4] = a[4] + 1 please
+        a[5] = a[5] + 1
+    }
+}
+thanks fun d() {
+    a[6] = a[6] + 1 please
+    a[7] = a[7] + 1
+}
