@@ -28,14 +28,46 @@ add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.in
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt -out test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt -out test_output_multiline_strings)
 add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt -out test_output_function_definitions_everywhere)
+add_test(NAME functions_do_return_fail COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/functions_do_return_fail.inslt -out test_output_functions_do_return_fail)
+set_property(TEST functions_do_return_fail PROPERTY WILL_FAIL TRUE)
+add_test(NAME functions_do_return_ok COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/functions_do_return_ok.inslt -out test_output_functions_do_return_ok)
 
+# uncomment the following lines to enable tests for exercise 1.1
+# add_test(NAME solution_1.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_1.inslt -out test_output_solution_1.1_1)
+# add_test(NAME solution_1.1_2 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_2.inslt -out test_output_solution_1.1_2)
+# add_test(NAME solution_1.1_3 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_3.inslt -out test_output_solution_1.1_3)
+# set_property(TEST solution_1.1_2 PROPERTY WILL_FAIL TRUE)
+# set_property(TEST solution_1.1_3 PROPERTY WILL_FAIL TRUE)
+
+# uncomment the following lines to enable tests for exercise 1.2
 add_test(NAME solution_1.2_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_1.inslt -out test_output_solution_1.2_1)
 add_test(NAME solution_1.2_2 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_2.inslt -out test_output_solution_1.2_2)
 add_test(NAME solution_1.2_3 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_3.inslt -out test_output_solution_1.2_3)
 add_test(NAME solution_1.2_4 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_4.inslt -out test_output_solution_1.2_4)
 add_test(NAME solution_1.2_5 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.2_tests/solution_1.2_5.inslt -out test_output_solution_1.2_5)
-
 set_property(TEST solution_1.2_2 PROPERTY WILL_FAIL TRUE)
 set_property(TEST solution_1.2_3 PROPERTY WILL_FAIL TRUE)
 set_property(TEST solution_1.2_4 PROPERTY WILL_FAIL TRUE)
 set_property(TEST solution_1.2_5 PROPERTY WILL_FAIL TRUE)
+
+# uncomment the following lines to enable tests for exercise 2.1
+# add_executable(test_output_2.1 ${PROJECT_SOURCE_DIR}/tests/solution_2.1_tests/test.cpp)
+# add_test(NAME solution_2.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_2.1_tests/solution_2.1_1.inslt -out test_output_solution_2.1_1)
+# set_tests_properties(solution_2.1_1 PROPERTIES FIXTURES_SETUP exe_2.1_1)
+# add_test(
+#     NAME output_test_solution_2.1_1
+#     COMMAND test_output_2.1 ${PROJECT_SOURCE_DIR}/tests/solution_2.1_tests/expected_output_2.1_1.txt test_output_solution_2.1_1 test_output_solution_2.1_1.txt
+#     DEPENDS solution_2.1_1
+# )
+# set_tests_properties(output_test_solution_2.1_1 PROPERTIES FIXTURES_REQUIRED exe_2.1_1)
+
+# uncomment the following lines to enable tests for exercise 3.1
+# add_executable(test_output_3.1 ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/test.cpp)
+# add_test(NAME solution_3.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/solution_3.1_1.inslt -out test_output_solution_3.1_1)
+# set_tests_properties(solution_3.1_1 PROPERTIES FIXTURES_SETUP exe_3.1_1)
+# add_test(
+#     NAME output_test_solution_3.1_1
+#     COMMAND test_output_3.1 ${PROJECT_SOURCE_DIR}/tests/solution_3.1_tests/expected_output_3.1_1.txt test_output_solution_3.1_1 test_output_solution_3.1_1.txt
+#     DEPENDS solution_3.1_1
+# )
+# set_tests_properties(output_test_solution_3.1_1 PROPERTIES FIXTURES_REQUIRED exe_3.1_1)

@@ -1,0 +1,9 @@
+fun f() {
+    if (true) {
+        return 1 please
+    } else if (true) {
+        return 2 please
+    } else {
+        return 3 please
+    }
+}
