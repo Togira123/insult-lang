@@ -28,6 +28,9 @@ add_test(NAME add_arrays COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/add_arrays.in
 add_test(NAME abc COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/abc.inslt -out test_output_abc)
 add_test(NAME multiline_strings COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/multiline_strings.inslt -out test_output_multiline_strings)
 add_test(NAME function_definitions_everywhere COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/function_definitions_everywhere.inslt -out test_output_function_definitions_everywhere)
+add_test(NAME functions_do_return_fail COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/functions_do_return_fail.inslt -out test_output_functions_do_return_fail)
+set_property(TEST functions_do_return_fail PROPERTY WILL_FAIL TRUE)
+add_test(NAME functions_do_return_ok COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/functions_do_return_ok.inslt -out test_output_functions_do_return_ok)
 
 # uncomment the following lines to enable tests for exercise 1.1
 # add_test(NAME solution_1.1_1 COMMAND inslt ${PROJECT_SOURCE_DIR}/tests/solution_1.1_tests/solution_1.1_1.inslt -out test_output_solution_1.1_1)
