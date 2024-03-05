@@ -113,6 +113,8 @@ inline node_type token_type_to_node_type(const token_type& type) {
     case token_type::COMMENT:
     case token_type::END_OF_INPUT:
         throw std::runtime_error("unable to convert <token_type> to <node_type>");
+    default:
+        throw std::runtime_error("unknown token type");
     }
 }
 
