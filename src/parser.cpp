@@ -1308,6 +1308,8 @@ int main(int argc, char* argv[]) {
         std::filesystem::remove(tmp_file);
         throw std::runtime_error("gcc is required on your system to compile this program");
     }
-    std::filesystem::remove(tmp_file);
+    if (!flags.count(compiler_flag::EMIT_CPP)) {
+        std::filesystem::remove(tmp_file);
+    }
     return return_code;
 }

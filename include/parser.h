@@ -154,7 +154,11 @@ inline compiler_flag string_to_compiler_flag(const std::string& flag) {
                                                                            {"output", compiler_flag::OUTPUT},
                                                                            {"out", compiler_flag::OUTPUT},
                                                                            {"forbid_library_names", compiler_flag::FORBID_LIBRARY_NAMES},
-                                                                           {"forbid_lib_names", compiler_flag::FORBID_LIBRARY_NAMES}};
+                                                                           {"forbid_lib_names", compiler_flag::FORBID_LIBRARY_NAMES},
+                                                                           {"emit_cpp", compiler_flag::EMIT_CPP},
+                                                                           {"emit_c++", compiler_flag::EMIT_CPP},
+                                                                           {"emitcpp", compiler_flag::EMIT_CPP},
+                                                                           {"emitc++", compiler_flag::EMIT_CPP}};
     if (convert.count(flag) == 0) {
         throw std::runtime_error("unknown compiler flag");
     }
