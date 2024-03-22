@@ -84,3 +84,7 @@ There are a few compiler flags which can be used to enable/disable certain featu
 * __-forbid_library_names__
 
     This flag forbids names of the standard library being used to define identifiers.
+
+* __-emit_cpp__
+
+    This flag emits the generated C++ code
